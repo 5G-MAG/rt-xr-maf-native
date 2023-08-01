@@ -1,0 +1,1 @@
+option('libmaf', type : 'boolean', value : false, description : 'toggle installing libmaf', yield: true)

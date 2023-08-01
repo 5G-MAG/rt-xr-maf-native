@@ -1,0 +1,4 @@
+Catch2*
+ffmpeg-n5.1-latest-*
+packagecache/
+!*.wrap

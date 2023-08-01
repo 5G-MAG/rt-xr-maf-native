@@ -1,0 +1,8 @@
+.ignore
+.vscode
+
+builddir/
+dist/
+.fake
+
+tests/

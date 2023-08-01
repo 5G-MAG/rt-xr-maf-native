@@ -1,0 +1,9 @@
+[wrap-file]
+directory = ffmpeg-n5.1-latest-win64-lgpl-shared-5.1
+source_url = https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n5.1-latest-win64-lgpl-shared-5.1.zip
+source_filename = ffmpeg-n5.1-latest-win64-lgpl-shared-5.1.zip
+source_hash = f108a4fc0e7d461b1a8416d66dc3a4e163a08f918051e1c6289253cc97835e22
+patch_directory = FFmpeg-5.1
+
+[provide]
+dependency_names = avformat, libavutil, libavcodec, libswscale, swresample
