@@ -66,7 +66,7 @@ Decoder *CreateDecoder(AVFormatContext *fmtCtx, uint32_t streamIdx)
     AVCodecContext *codecCtx;
     AVStream *stream;
     int err = 0;
-    if (streamIdx > fmtCtx->nb_streams)
+    if (streamIdx >= fmtCtx->nb_streams)
     {
         throw "invalid stream id";
     }
@@ -460,27 +460,16 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
     /*
         Normaly, the maf frame audio buffer is filled entirely with samples, and sample count can be derived from buffer format and size. 
         One decoded audio frame can result in 0 or more maf frames being written.
-        However, when needsAccessorHeaders == true, each decoded audio frame will be copied to a maf frame.
+        However, when useAccessorHeaders_ == true, each decoded audio frame will be copied to a maf frame.
         In that case, the maf frame buffer may be too large, 
         the frame accessors headers provide the sample count - if the maf frame buffer isn't large enough, an error is thrown.
     */
-
-   /*
-   FIXME: this is a mis-interpreatation of handler->headerLength.
-   It is not related to the presence of timed accessor headers.
-   */
-    bool needsAccessorHeaders = handler->headerLength > 0;
     
-    int totalHeaderLength = 0;
-    if (needsAccessorHeaders)
+    int accessorsHeadersLength = 0;
+    if (useAccessorHeaders_)
     {
         headers = BufferInfoHeader::CreateAccessorsHeaders(&(bufferInfo), true);
-        BufferInfoHeader::ComputeTotalHeadersLength(headers, totalHeaderLength);
-        if (totalHeaderLength > handler->headerLength)
-        {
-            throw "Invalid header length found on buffer handler passed to audio decoder";
-        }
-        totalHeaderLength = handler->headerLength;
+        BufferInfoHeader::ComputeTotalHeadersLength(headers, accessorsHeadersLength);
     }
 
     bool needsResampling = outputNumChannels != codecCtx_->ch_layout.nb_channels;
@@ -520,7 +509,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
 
         bool eof = false;
 
-        int dstSampleCapacity = (mafFrame->length-totalHeaderLength) / ((int)bufferInfo.size()*componentSize(bufferInfo.at(0).componentType));
+        int dstSampleCapacity = (mafFrame->length-accessorsHeadersLength) / ((int)bufferInfo.size()*componentSize(bufferInfo.at(0).componentType));
         int dstSamplesWritten = 0;
         int srcSamplesRead = -1;
 
@@ -592,7 +581,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
                         }
                         uint8_t* pData = mafFrame->data;
                         
-                        if (needsAccessorHeaders)
+                        if (useAccessorHeaders_)
                         {
                             int count = avFrame->nb_samples;
 #if ENABLE_AUDIO_RESAMPLING
@@ -617,12 +606,12 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
                                 BufferInfoHeader::ComputeAccessorsHeadersPlanar(headers);
                             }
                             BufferInfoHeader::WriteAccessorsHeaders(pData, headers);
-                            pData += totalHeaderLength;
+                            pData += accessorsHeadersLength;
                         }
 
                         if (needsResampling){
 #if ENABLE_AUDIO_RESAMPLING
-                            if (needsAccessorHeaders){
+                            if (useAccessorHeaders_){
                                 setResamplerOutput(swrOut, pData, headers, 0);
                                 if(swr_convert(swr, swrOut, dstSampleCapacity, (const uint8_t **)avFrame->data, avFrame->nb_samples) < 0){
                                     throw "resampling error";
@@ -642,7 +631,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
                             throw "resampling disabled";
 #endif
                         } else {
-                            if(needsAccessorHeaders){
+                            if(useAccessorHeaders_){
                                 copyAudioSamples(avFrame->data, 0, pData, 0, avFrame->nb_samples, outputSampleSize, outputNumChannels, outputPackedChannels);
                                 dstSamplesWritten = dstSampleCapacity;
                                 av_frame_unref(avFrame);
