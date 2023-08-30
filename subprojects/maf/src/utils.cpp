@@ -27,9 +27,9 @@ inline int getItemSize(SampleType type, ComponentType componentType){
 /* public functions ************************************************************************/ 
 
 int BufferInfoHeader::GetHeaderSize(){
-    int sz = 192;
-    if (this->immutable){
-        sz += 48;
+    int sz = 24;
+    if (!this->immutable){
+        sz += 12;
     }
     sz += (2 * componentSize(this->componentType) * sampleSize(this->type));
     return sz;
