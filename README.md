@@ -21,7 +21,7 @@ The implementation is organized through *subprojects*:
 ## Downloading
 
 ```
-git clone https://github.com/5G-MAG/rt-xr-maf-plugin.git
+git clone https://github.com/5G-MAG/rt-xr-maf-native.git
 ```
 
 ## Building
