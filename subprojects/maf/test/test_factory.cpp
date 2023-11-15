@@ -38,15 +38,18 @@ TEST_CASE("MediaPipelineFactory::loadPluginsDir(), given MAF_PLUGINS_DIR is not 
 
 TEST_CASE("MediaPipelineFactory::loadPluginsDir(), given MAF_PLUGINS_DIR is set but not valid"){
     MAF::MediaPipelineFactory factory;
-    auto str = "/path/not/found";
-    CHECK(!std::filesystem::directory_entry(str).exists());
-    _putenv_s("MAF_PLUGINS_DIR", str);
+    auto p = "/path/not/found";
+    CHECK(!std::filesystem::directory_entry(p).exists());
+    _putenv_s("MAF_PLUGINS_DIR", p);
     REQUIRE_NOTHROW(factory.loadPluginsDir());
     REQUIRE(factory.plugins.size() == 0);
 }
 
-TEST_CASE("MediaPipelineFactory::loadPluginsDir(), given MAF_PLUGINS_DIR is valid"){
+TEST_CASE("MediaPipelineFactory::loadPluginsDir(), given MAF_PLUGINS_DIR contains plugins"){
     MAF::MediaPipelineFactory factory;
+    if (MAF_PLUGINS_DIR == 0){
+        SKIP("MAF_PLUGINS_DIR environment variable not set");
+    }
     CHECK(std::filesystem::directory_entry(MAF_PLUGINS_DIR).exists());
     _putenv_s("MAF_PLUGINS_DIR", MAF_PLUGINS_DIR);
     REQUIRE_NOTHROW(factory.loadPluginsDir());
