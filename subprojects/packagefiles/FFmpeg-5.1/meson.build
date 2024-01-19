@@ -37,5 +37,5 @@ libswscale_dep = declare_dependency(
 libswresample_dep = declare_dependency( 
     dependencies : cxx.find_library('swresample', required: true, dirs : ffmpeg_lib_dir ), 
     include_directories : ffmpeg_include, 
-    version: '4.7.100'
+    version: '4.7.100' 
 )

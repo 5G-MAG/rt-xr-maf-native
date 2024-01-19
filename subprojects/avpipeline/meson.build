@@ -10,7 +10,7 @@ cxx = meson.get_compiler('cpp')
 libmaf_dep = dependency('libmaf', method: 'auto', fallback: ['maf', 'libmaf_dep'])
 
 # libav dependency taken from gstreamer's libav plugin build file
-# this loads system dependcy if it exists, otherwise fallbacks to Subprojects/FFmpeg/meson.build
+# this loads system dependency if it exists, otherwise fallbacks to Subprojects/FFmpeg/meson.build
 libavformat_dep = dependency('libavformat', method: 'auto', version: '>= 59.27.100',
   fallback: ['FFmpeg', 'libavformat_dep'])
 libavcodec_dep = dependency('libavcodec', method: 'auto', version: '>= 59.37.100',
@@ -36,12 +36,13 @@ endforeach
 avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp'])
 avpipeline_includes = include_directories('include')
 
-avpipeline = shared_library(
+avpipeline = both_libraries(
     'avpipeline',
     avpipeline_sources,
     gnu_symbol_visibility : 'default',
     include_directories : [avpipeline_includes],
     dependencies: [libmaf_dep, libav_deps],
     cpp_args : ['-D__MAFAPI_EXPORT'],
-    install: true
+    install: true,
+    install_tag: 'avpipeline'
 )

@@ -111,7 +111,21 @@ void MediaPipelineFactory::loadPluginDL(char* dll){
 
     if (handle_){
 #ifdef _WIN32
-        RegisterFactoryPluginFn fpRegisterFactoryPlugin = reinterpret_cast<RegisterFactoryPluginFn>(GetProcAddress(handle_, fpFnName.c_str()));
+
+
+    /* GCC 8 adds -Wcast-function-type. */
+    #if __GNUC__ >= 8
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wcast-function-type"
+    #endif
+        FARPROC pFn = GetProcAddress(handle_, fpFnName.c_str());
+        if(pFn == 0){
+            return;
+        }
+        RegisterFactoryPluginFn fpRegisterFactoryPlugin = reinterpret_cast<RegisterFactoryPluginFn>(pFn);
+    #if __GNUC__ >= 8
+    #pragma GCC diagnostic pop
+    #endif
 #else
         RegisterFactoryPluginFn fpRegisterFactoryPlugin = reinterpret_cast<RegisterFactoryPluginFn>(dlsym(handle_, fpFnName));
 #endif

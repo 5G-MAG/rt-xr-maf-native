@@ -1,9 +1,0 @@
-[wrap-file]
-directory = ffmpeg-n5.1.4-win64-gpl-shared-5.1
-source_url = https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2023-11-10-12-51/ffmpeg-n5.1.4-win64-gpl-shared-5.1.zip
-source_filename = ffmpeg-n5.1.4-win64-gpl-shared-5.1.zip
-source_hash = 0a310d9089c14002ae2a1de5c7c2f1943b7223921a609cc2f4e9958ee8a7a010
-patch_directory = FFmpeg-5.1
-
-[provide]
-dependency_names = avformat, libavutil, libavcodec, libswscale, swresample

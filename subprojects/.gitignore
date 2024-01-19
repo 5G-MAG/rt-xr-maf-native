@@ -1,4 +1,3 @@
 Catch2*
-ffmpeg-*
+FFmpeg
 packagecache/
-!*.wrap

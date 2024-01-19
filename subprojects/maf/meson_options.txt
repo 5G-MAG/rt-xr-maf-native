@@ -1,1 +1,1 @@
-option('libmaf', type : 'boolean', value : false, description : 'toggle installing libmaf', yield: true)
+option('libmaf', type : 'boolean', value : true, description : 'toggle installing libmaf', yield: true)

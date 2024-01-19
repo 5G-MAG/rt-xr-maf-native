@@ -6,3 +6,6 @@ dist/
 .fake
 
 tests/
+
+subprojects/FFmpeg/
+subprojects/FFmpeg.wrap
