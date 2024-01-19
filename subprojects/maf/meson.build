@@ -22,7 +22,8 @@ libmaf = both_libraries(
     gnu_symbol_visibility : 'default',
     pic : true,
     cpp_args : ['-D__MAFAPI_EXPORT'],
-    install : get_option('libmaf')
+    install : get_option('libmaf'),
+    install_tag: 'libmaf'
 )
 
 libmaf_dep = declare_dependency(include_directories: libmaf_includes, link_with: libmaf.get_static_lib())

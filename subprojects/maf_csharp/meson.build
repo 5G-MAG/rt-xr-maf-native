@@ -13,9 +13,10 @@ cs_wrapper = both_libraries(
     cs_wrapper_sources,
     gnu_symbol_visibility : 'default',
     dependencies: [libmaf_dep],
+    cpp_args : ['-D__MAFAPI_EXPORT'],
     install : true,
-    cpp_args : ['-D__MAFAPI_EXPORT']
+    install_tag: 'libmaf_cs'
 )
 
 cs_dir = meson.current_source_dir()
-install_subdir(join_paths(cs_dir, 'maf'), install_dir: 'maf', install_tag: 'cs', strip_directory: true)
+install_subdir(join_paths(cs_dir, 'maf'), install_dir: 'maf', install_tag: 'swig_cs', strip_directory: true)

@@ -2,7 +2,6 @@
 STASH_NAME="pre-commit-$(date +%s)"
 git stash save --quiet --keep-index --include-untracked $STASH_NAME
 
-
 meson setup --reconfigure -Davpipeline=true -Dcsharp=true -Dlibmaf=true builddir
 meson test -C builddir
 RESULT=$?
