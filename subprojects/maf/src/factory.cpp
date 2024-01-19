@@ -111,14 +111,18 @@ void MediaPipelineFactory::loadPluginDL(char* dll){
 
     if (handle_){
 #ifdef _WIN32
-    /* GCC 8 adds -Wcast-function-type, enabled by default with -Wextra, which
-    causes this line to emit a warning on MinGW. We know what we're doing,
-    so suppress that. */
+
+
+    /* GCC 8 adds -Wcast-function-type. */
     #if __GNUC__ >= 8
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wcast-function-type"
     #endif
-        RegisterFactoryPluginFn fpRegisterFactoryPlugin = reinterpret_cast<RegisterFactoryPluginFn>(GetProcAddress(handle_, fpFnName.c_str()));
+        FARPROC pFn = GetProcAddress(handle_, fpFnName.c_str());
+        if(pFn == 0){
+            return;
+        }
+        RegisterFactoryPluginFn fpRegisterFactoryPlugin = reinterpret_cast<RegisterFactoryPluginFn>(pFn);
     #if __GNUC__ >= 8
     #pragma GCC diagnostic pop
     #endif
