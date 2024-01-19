@@ -400,7 +400,6 @@ TEST_CASE("BufferHandler::writeFrame3() blocks as long as buffer is full"){
     
     BufferHandler bh;
     Frame frame;
-    Frame* f;
     
     std::mutex m;
     std::condition_variable cv;
@@ -436,7 +435,7 @@ TEST_CASE("BufferHandler::writeFrame3() blocks as long as buffer is full"){
     
     {   // doesn't block when buffer isn't full
         std::unique_lock<std::mutex> l(m);
-        f = bh.readFrame();
+        bh.readFrame();
         auto r = cv.wait_for(l, timeout);
         REQUIRE( r == std::cv_status::no_timeout );
     }

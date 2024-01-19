@@ -9,3 +9,4 @@ wrapdb_version = 3.3.2-1
 [provide]
 catch2 = catch2_dep
 catch2-with-main = catch2_with_main_dep
+
