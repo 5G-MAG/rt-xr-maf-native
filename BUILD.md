@@ -42,8 +42,10 @@ meson configure --buildtype=release builddir
 
 ## Build system
 
-The project uses the meson build system. See [this quickstart guide](https://mesonbuild.com/Quick-guide.html#compiling-a-meson-project) if you are new to it.
+The project uses the [**meson**](https://mesonbuild.com/Getting-meson.html#dependencies) build system. See [this quickstart guide](https://mesonbuild.com/Quick-guide.html#compiling-a-meson-project) if you are new to it. 
 
+This documentation assumes usage of the default ninja backend, regardless of the toolchain used.
+Meson supports a range of toolchains (GCC, Clang, Visual Studio, MinGW, ICC, ARMCC ...)
 
 ## Dependencies
 
