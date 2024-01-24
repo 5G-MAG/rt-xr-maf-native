@@ -83,18 +83,19 @@ ls -l artifacts/
 
 It is possible to automatically download pre-built libraries over HTTP when running `meson build`.
 
-1. create a wrap file describing the were to get the pre-compiled libraries for ffmpeg 5.1, **subprojects/FFmpeg.wrap**:
-    ```
-    [wrap-file]
-    directory = ffmpeg-n5.1-latest-win64-gpl-shared-5.1
-    source_url = https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n5.1-latest-win64-gpl-shared-5.1.zip
-    source_filename = ffmpeg-n5.1-latest-win64-gpl-shared-5.1.zip
-    source_hash = 8c838f5ae92933ac55293b19854ef158c0dcdcf1dbf164df211803e2b76281b8
-    patch_directory = FFmpeg-5.1
+1. create a wrap file describing were to get the pre-compiled libraries for ffmpeg 5.1, **subprojects/FFmpeg.wrap**:
+```
+[wrap-file]
+directory = ffmpeg-n5.1-latest-win64-gpl-shared-5.1
+source_url = https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n5.1-latest-win64-gpl-shared-5.1.zip
+source_filename = ffmpeg-n5.1-latest-win64-gpl-shared-5.1.zip
+source_hash = 8c838f5ae92933ac55293b19854ef158c0dcdcf1dbf164df211803e2b76281b8
+patch_directory = FFmpeg-5.1
 
-    [provide]
-    dependency_names = avformat, libavutil, libavcodec, libswscale, swresample
-    ```
+[provide]
+dependency_names = avformat, libavutil, libavcodec, libswscale, swresample
+```
+*note: the `source_hash` may be outdated in the above exemple.*
 
 2. do **not** remove `subprojects/packagefiles/FFmpeg-5.1`
 
