@@ -1,6 +1,6 @@
 # TODO: update to v3.4 to disable catch2/SelfTest 
 # https://github.com/catchorg/Catch2/pull/2693
-catch2 = dependency('catch2-with-main', version : '3.3.2')
+catch2 = dependency('catch2-with-main', version : '3.4.0')
 test_deps = [catch2, libmaf_dep]
 
 exe = executable('test_factory', files(['test_factory.cpp']), dependencies : test_deps, install: false )
