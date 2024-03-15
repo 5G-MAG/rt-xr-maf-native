@@ -1,0 +1,50 @@
+name: check build on pull request
+run-name: ${{ github.actor }} is building MAF factory and plugins
+on: 
+  pull_request:
+    branches:
+      - 'development'
+      - 'main'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env: 
+        VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+            
+      - name: install python build deps
+        run: pip install meson ninja
+
+      - name: build windows dependencies
+        run: vcpkg install
+
+      - name: install pkgconfiglite (meson dependency)
+        run: choco install pkgconfiglite
+
+      - name: configure
+        run: meson setup --wipe --buildtype=release builddir -Dpkg_config_path="C:\\vcpkg\\packages\\ffmpeg_x64-windows\\lib\\pkgconfig;C:\\vcpkg\\packages\\catch2_x64-windows\\debug\\lib\\pkgconfig;"
+
+      - name: test
+        # run: meson test -C builddir
+        run: meson compile -C builddir
+
+      - name: prepare artifacts for rt.xr.maf
+        run: |
+          meson install -C builddir --tags swig_cs --destdir dist/unity/rt.xr.maf
+          meson install -C builddir --tags libmaf_cs,avpipeline --destdir dist/unity/rt.xr.maf/x86_64-w64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rt.xr.maf-unity-${{ github.event.pull_request.head.sha }}
+          path: builddir/dist/unity/rt.xr.maf
+          if-no-files-found: error
