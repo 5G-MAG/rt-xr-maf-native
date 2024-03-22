@@ -141,8 +141,6 @@ void AvMediaPipeline::initialize(MediaInfo mediaInfo, std::vector<BufferInfo> bu
     mediaInfo_ = mediaInfo;
     buffer_info_ = buffers;
 
-    std::map<int, BufferHandler*> buffIds;
-
     try {
 
         for (BufferInfo buff : buffer_info_) {
@@ -218,19 +216,10 @@ void AvMediaPipeline::fetch(){
                     break;
                 }
             }
-            Decoder* dec = decoders_[avPkt->stream_index];
-            if(dec){
-                dec->QueuePacket(avPkt);
+            if (decoders_.find(avPkt->stream_index) != decoders_.end()){
+                decoders_[avPkt->stream_index]->QueuePacket(avPkt);
             }
         }
-
-        /*
-        for (auto & [streamIdx, dec]: decoders_){
-            if(dec){
-                dec->Stop();
-            }
-        }
-        */
         
         stateLock_->lock();
         state_ = PipelineState::IDLE; // TODO: reset/resume/notify
