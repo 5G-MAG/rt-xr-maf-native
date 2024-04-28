@@ -1,4 +1,4 @@
-<h1 align="center">Media Access Function (MAF) API</h1>
+<h1 align="center">Media pipelines factory and plugins implementing the Media Access Function (MAF) API</h1>
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Under_Development-yellow" alt="Under Development">
   <img src="https://img.shields.io/github/v/tag/5G-MAG/rt-xr-maf-native?label=version" alt="Version">
