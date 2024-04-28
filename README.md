@@ -1,24 +1,24 @@
-# rt-xr-maf-native
+<h1 align="center">Media Access Function (MAF) API</h1>
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-Under_Development-yellow" alt="Under Development">
+  <img src="https://img.shields.io/github/v/tag/5G-MAG/rt-xr-maf-native?label=version" alt="Version">
+  <img src="https://img.shields.io/badge/License-5G--MAG%20Public%20License%20(v1.0)-blue" alt="License">
+</p>
 
 ## Introduction
+This repository provides implementation of the Media Access Functions API (MAF) defined in [ISO/IEC 23090-14](https://www.iso.org/obp/ui/#iso:std:iso-iec:23090:-14:ed-1:v1:en). The Media Access Functions API allows media playback and access in the context of 3D Scene Description encoding.
 
-This repository provides implementation of the Media Access Functions API (MAF) defined in ISO/IEC 23090-14.
+The project is a dependency of [`rt-xr-unity-player`](https://github.com/5G-MAG/rt-xr-unity-player), providing the build artifacts for [`rt-xr-maf-plugin`](https://github.com/5G-MAG/rt-xr-maf-plugin).
 
-The Media Access Functions API allows media playback and access in the context of 3D Scene Description encoding as specified through [ISO/IEC 23090-14](https://www.iso.org/obp/ui/#iso:std:iso-iec:23090:-14:ed-1:v1:en).
-
+### About the implementation
 The implementation is organized through *subprojects*:
 - **subprojects/maf**: the core library implementing the MAF API, along with a media pipeline factory.
 - **subprojects/maf_csharp**: SWIG C# bindings.
 - **subprojects/avpipeline**: a media pipeline which uses libav for audio/video decoding.
 
-The project is a dependency of [`rt-xr-unity-player`](https://github.com/5G-MAG/rt-xr-unity-player), providing the build artifacts for [`rt-xr-maf-plugin`](https://github.com/5G-MAG/rt-xr-maf-plugin).
-
-
-### Supported platforms
-
 The project currently supports win64.
-Contributions to support additional platforms are welcome.
 
+Contributions to support additional platforms are welcome.
 
 ## Building
 
@@ -50,9 +50,6 @@ If you intend to develop a new media pipeline, take a look at the `subprojects/a
 - When the XR player executes, it calls `MAF::MediaPipelineFactory::loadPluginsDir()` which looks up the given directory for dynamic libraries implementing the plugin interface `IMediaPipelineFactoryPlugin`.
 - A call to `MediaPipelineFactory::createMediaPipeline()` iterates registered plugins until a MediaPipeline is successfully created - if any - and can returned to the application.
 
-
-## Contributing
-
 ### Gitflow
 
 This project follows the [Gitflow workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow). 
@@ -60,7 +57,6 @@ This project follows the [Gitflow workflow](https://www.atlassian.com/git/tutori
 The `development` branch of this project serves as an integration branch for new features. 
 
 Consequently, please make sure to switch to the `development` branch before starting the implementation of a new feature.
-
 
 ### pre_commit hook
 
