@@ -10,6 +10,8 @@ This repository provides implementation of the Media Access Functions API (MAF) 
 
 The project is a dependency of [`rt-xr-unity-player`](https://github.com/5G-MAG/rt-xr-unity-player), providing the build artifacts for [`rt-xr-maf-plugin`](https://github.com/5G-MAG/rt-xr-maf-plugin).
 
+Additional information can be found at: https://5g-mag.github.io/Getting-Started/pages/xr-media-integration-in-5g/
+
 ### About the implementation
 The implementation is organized through *subprojects*:
 - **subprojects/maf**: the core library implementing the MAF API, along with a media pipeline factory.
