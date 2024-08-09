@@ -21,7 +21,7 @@ Providing you have all [dependencies installed](#Dependencies), the project can 
 ```
 git clone https://github.com/5G-MAG/rt-xr-maf-native.git
 cd rt-xr-maf-native
-meson setup builddir
+meson setup builddir --cross-file crossfile/android-aarch64
 meson compile -C builddir
 meson install -C builddir --tags swig_cs --destdir path\to\rt-xr-unity-player\Packages\rt.xr.maf
 meson install -C builddir --tags libmaf_cs,avpipeline --destdir path\to\rt-xr-unity-player\Packages\rt.xr.maf\x86_64-w64

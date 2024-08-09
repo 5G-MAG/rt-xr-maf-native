@@ -68,7 +68,7 @@ extern "C" {
         virtual void stopFetching();
     };
 
-    __declspec(dllexport) void RegisterFactoryPlugin(MediaPipelineFactory* factory);
+    MAF_API void RegisterFactoryPlugin(MediaPipelineFactory* factory);
 
 } // extern "C"
 

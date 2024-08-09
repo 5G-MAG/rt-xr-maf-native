@@ -290,6 +290,6 @@ void AvMediaPipeline::stopFetching(){
     }
 };
 
-__declspec(dllexport) void RegisterFactoryPlugin(MediaPipelineFactory* factory){
+MAF_API void RegisterFactoryPlugin(MediaPipelineFactory* factory){
     factory->plugins.push_back((IMediaPipelineFactoryPlugin*)(new MediaPipelineFactoryPlugin<AvMediaPipeline>()));
 }

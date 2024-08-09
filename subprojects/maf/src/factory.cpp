@@ -103,7 +103,7 @@ void MediaPipelineFactory::loadPluginDL(char* dll){
         throw "Failed to load DLL - unknown error: " + fp.string();
     }
 #else
-    handle_ = dlopen(lib, RTLD_LAZY | RTLD_DEEPBIND);
+    handle_ = dlopen(dll, RTLD_LAZY);
     if (!handle_){
         throw "Failed to load plugin library: " + fp.string();
     }
@@ -111,8 +111,6 @@ void MediaPipelineFactory::loadPluginDL(char* dll){
 
     if (handle_){
 #ifdef _WIN32
-
-
     /* GCC 8 adds -Wcast-function-type. */
     #if __GNUC__ >= 8
     #pragma GCC diagnostic push
@@ -127,7 +125,7 @@ void MediaPipelineFactory::loadPluginDL(char* dll){
     #pragma GCC diagnostic pop
     #endif
 #else
-        RegisterFactoryPluginFn fpRegisterFactoryPlugin = reinterpret_cast<RegisterFactoryPluginFn>(dlsym(handle_, fpFnName));
+        RegisterFactoryPluginFn fpRegisterFactoryPlugin = reinterpret_cast<RegisterFactoryPluginFn>(dlsym(handle_, fpFnName.c_str()));
 #endif
         fpRegisterFactoryPlugin(this);
 

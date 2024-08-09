@@ -12,5 +12,5 @@ test('test buffer handler', exe)
 exe = executable('test_frame', files(['test_frame.cpp']), dependencies : test_deps, install: false )
 test('test frame', exe)
 
-exe = executable('test_accessor_headers', files(['test_accessor_headers.cpp']), dependencies : test_deps, install: false, cpp_args : ['-D__MAFAPI_EXPORT'])
+exe = executable('test_accessor_headers', files(['test_accessor_headers.cpp']), dependencies : test_deps, install: false, cpp_args : ['-D__MAF_API_EXPORT'])
 test('test accessor header', exe)

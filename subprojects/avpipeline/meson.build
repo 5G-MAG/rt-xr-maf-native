@@ -42,7 +42,7 @@ avpipeline = both_libraries(
     gnu_symbol_visibility : 'default',
     include_directories : [avpipeline_includes],
     dependencies: [libmaf_dep, libav_deps],
-    cpp_args : ['-D__MAFAPI_EXPORT'],
+    cpp_args : ['-D__MAF_API_EXPORT'],
     install: true,
     install_tag: 'avpipeline'
 )

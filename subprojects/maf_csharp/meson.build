@@ -13,7 +13,7 @@ cs_wrapper = both_libraries(
     cs_wrapper_sources,
     gnu_symbol_visibility : 'default',
     dependencies: [libmaf_dep],
-    cpp_args : ['-D__MAFAPI_EXPORT'],
+    cpp_args : ['-D__MAF_API_EXPORT'],
     install : true,
     install_tag: 'libmaf_cs'
 )

@@ -352,7 +352,7 @@ inline void copyAudioSamples(uint8_t ** src, int srcSampleOffset, uint8_t * dst,
     }
     else
     {
-        for (int ch = 0; ch++; numChannels)
+        for (int ch = 0; ch < numChannels; ch++)
         {
             memcpy(dst + dstByteOffset, src[ch] + srcByteOffset, chanByteLength);
             dstByteOffset += chanByteLength;
@@ -367,7 +367,7 @@ inline void setResamplerOutput(uint8_t** out, uint8_t* data, std::vector<BufferI
     if (headers->at(0).bufferViewByteStride == 0)
     {
         // mono-channel or planar buffer format
-        for (int h = 0; h < headers->size(); h++)
+        for (size_t h = 0; h < headers->size(); h++)
         {
             out[h] = data + headers->at(h).byteOffset + offset;
         }
@@ -384,7 +384,7 @@ inline void setResamplerOutput(uint8_t** out, uint8_t* data, std::vector<BufferI
     if (bufferInfo->at(0).stride == 0)
     {
         // mono-channel or planar buffer format
-        for (int i = 0; i < bufferInfo->size(); i++)
+        for (size_t i = 0; i < bufferInfo->size(); i++)
         {
             out[i] = data + bufferInfo->at(i).offset + offset;
         }
