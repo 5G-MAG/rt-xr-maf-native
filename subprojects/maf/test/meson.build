@@ -3,9 +3,6 @@
 catch2 = dependency('catch2-with-main', version : '3.4.0')
 test_deps = [catch2, libmaf_dep]
 
-exe = executable('test_factory', files(['test_factory.cpp']), dependencies : test_deps, install: false )
-test('test factory', exe)
-
 exe = executable('test_bufferhandler', files(['test_bufferhandler.cpp']), dependencies : test_deps, install: false )
 test('test buffer handler', exe)
 

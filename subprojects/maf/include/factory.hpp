@@ -14,59 +14,54 @@
 #ifndef _MAF_FACTORY_
 #define _MAF_FACTORY_
 
-#include<string.h>
+#include<string>
+#include<map>
+#include<functional>
 
-#include<filesystem>
 #include<maf.hpp>
-
-#ifdef _WIN32
-    #include <Windows.h>
-#else
-    #include <dlfcn.h>
-#endif
 
 namespace MAF {
 
-#ifdef _WIN32
-    typedef HMODULE DL_HANDLE;
-#else
-    typedef void* DL_HANDLE;
-#endif
-
-class IMediaPipelineFactoryPlugin
-{ 
+class MediaPipelineFactory {
+    
     public:
-        virtual ~IMediaPipelineFactoryPlugin()=default;
-        virtual IMediaPipeline* createMediaPipeline()=0;
-};
+        MediaPipelineFactory() = default;
+        ~MediaPipelineFactory() = default;
 
-template <typename T> class MediaPipelineFactoryPlugin : IMediaPipelineFactoryPlugin {
-    public:
-         MediaPipelineFactoryPlugin() = default;
-        ~MediaPipelineFactoryPlugin() = default;
+        static MediaPipelineFactory* getInstance(){
+            static MediaPipelineFactory instance;
+            return &instance;
+        }
 
-        IMediaPipeline* createMediaPipeline() {
-            return new T();
+        std::map<std::string, std::function<IMediaPipeline*(void)>> registry;
+
+        void registerPlugin(std::string name, std::function<IMediaPipeline*(void)> factoryFn){
+            registry[name] = factoryFn;
+        }
+
+        IMediaPipeline* createMediaPipeline(MediaInfo mediaInfo, std::vector<BufferInfo> buffers){
+            IMediaPipeline* res = nullptr;
+            for (auto &[name, factoryFn] : registry ){      
+                try {
+                    res = factoryFn();
+                    res->initialize(mediaInfo, buffers);
+                    return res;
+                } catch (...){
+                    delete res;
+                    res = nullptr;
+                }
+            }
+            return res;
         }
 };
 
-class MediaPipelineFactory {
-    
-    private:
-        std::vector<DL_HANDLE> handles_; 
-
+template <typename T> class MediaPipelineFactoryPlugin {
     public:
-        MediaPipelineFactory() = default;
-        ~MediaPipelineFactory();
-        std::vector<IMediaPipelineFactoryPlugin*> plugins;
-        void loadPluginsDir(char * plugin_dir = nullptr);
-        void loadPluginDL(char * dll);
-        IMediaPipeline* createMediaPipeline(MediaInfo mediaInfo, std::vector<BufferInfo> buffers);
+        MediaPipelineFactoryPlugin(std::string name){
+            MediaPipelineFactory::getInstance()->registerPlugin(name, [](void) -> IMediaPipeline * { return new T();});
+        };
+        ~MediaPipelineFactoryPlugin() = default;
 };
-
-typedef void (*RegisterFactoryPluginFn)(MediaPipelineFactory*);
-
-const std::string fpFnName = "RegisterFactoryPlugin";
 
 }
 #endif // _MAF_FACTORY_

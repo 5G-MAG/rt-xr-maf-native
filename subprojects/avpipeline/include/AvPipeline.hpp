@@ -68,8 +68,9 @@ extern "C" {
         virtual void stopFetching();
     };
 
-    MAF_API void RegisterFactoryPlugin(MediaPipelineFactory* factory);
-
+    static MediaPipelineFactoryPlugin<AvMediaPipeline> avMediaPipelinePlugin("AVMediaPipeline");
+    
 } // extern "C"
+
 
 #endif

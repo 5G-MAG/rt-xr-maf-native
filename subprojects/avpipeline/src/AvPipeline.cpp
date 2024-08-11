@@ -35,7 +35,7 @@ extern "C" {
 
 using namespace MAF;
 
-AvMediaPipeline::AvMediaPipeline(): stateLock_(new std::mutex()), state_(PipelineState::IDLE), avFmtCtx_(nullptr) {};
+AvMediaPipeline::AvMediaPipeline(): state_(PipelineState::IDLE), stateLock_(new std::mutex()), avFmtCtx_(nullptr) {};
 
 AvMediaPipeline::~AvMediaPipeline(){
     for(auto &[streamId, dec] : decoders_){
@@ -106,7 +106,7 @@ static void mapTracksToMafBuffers(std::map<uint32_t, MafBuffer> &streamBufferMap
     if (alt->tracks.size() == 0){
         // map buffer to streams in increasing order
         sort(sorted.begin(), sorted.end(), compareBufferIds);
-        for(int i=0; i < sorted.size(); i++ ){
+        for(size_t i=0; i < sorted.size(); i++ ){
             streamBufferMap[i] = *(sorted[i]);
         }
     } else {
@@ -289,7 +289,3 @@ void AvMediaPipeline::stopFetching(){
         thread_.join();
     }
 };
-
-MAF_API void RegisterFactoryPlugin(MediaPipelineFactory* factory){
-    factory->plugins.push_back((IMediaPipelineFactoryPlugin*)(new MediaPipelineFactoryPlugin<AvMediaPipeline>()));
-}
