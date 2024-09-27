@@ -2,13 +2,13 @@
 ar = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar']
 c = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android28-clang']
 cpp = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android28-clang++']
-c_ld = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/ld.lld', '-llog']
-cpp_ld = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/ld.lld', '-llog']
+c_ld = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/ld.lld']
+cpp_ld = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/ld.lld']
 strip = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-strip']
 # Android doesn't come with a pkg-config, but we need one for Meson to be happy not
 # finding all the optional deps it looks for.  Use system pkg-config pointing at a
 # directory we get to populate with any .pc files we want to add for Android
-pkg-config = ['env', 'PKG_CONFIG_LIBDIR=~/code/rt-xr-maf-native/subprojects/FFmpeg/lib/pkgconfig', '/opt/homebrew/bin/pkg-config']
+pkg-config = ['env', 'PKG_CONFIG_LIBDIR=~/code/rt-xr-maf-native/subprojects/FFmpeg/lib/pkgconfig']
 
 [host_machine]
 system = 'android'

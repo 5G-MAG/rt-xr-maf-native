@@ -10,3 +10,4 @@ tests/
 subprojects/FFmpeg/
 subprojects/FFmpeg.wrap
 vcpkg_installed/
+.DS_store

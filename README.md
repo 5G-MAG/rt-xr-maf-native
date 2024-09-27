@@ -6,34 +6,46 @@
 </p>
 
 ## Introduction
+
 This repository provides implementation of the Media Access Functions API (MAF) defined in [ISO/IEC 23090-14](https://www.iso.org/obp/ui/#iso:std:iso-iec:23090:-14:ed-1:v1:en). The Media Access Functions API allows media playback and access in the context of 3D Scene Description encoding.
 
-The project is a dependency of [`rt-xr-unity-player`](https://github.com/5G-MAG/rt-xr-unity-player), providing the build artifacts for [`rt-xr-maf-plugin`](https://github.com/5G-MAG/rt-xr-maf-plugin).
+Additional information can be found at [xr-player-overview](https://5g-mag.github.io/Getting-Started/pages/xr-media-integration-in-5g/usage/xr-player-overview.html).
 
-Additional information can be found at: https://5g-mag.github.io/Getting-Started/pages/xr-media-integration-in-5g/
+The MAF API abstracts timed media fetching, exposing decoded timestamped media buffers to the 3D presentation engine.
+The media buffers may not expose video, audio, but also 3D geometry arrays or arbitrary data referenced through gltf accessors.
 
-### About the implementation
 The implementation is organized through *subprojects*:
+
 - **subprojects/maf**: the core library implementing the MAF API, along with a media pipeline factory.
 - **subprojects/maf_csharp**: SWIG C# bindings.
 - **subprojects/avpipeline**: a media pipeline which uses libav for audio/video decoding.
 
-The project currently supports win64.
-
-Contributions to support additional platforms are welcome.
 
 ## Building
 
-Providing you have all dependencies installed, the project can be built and installed on windows as follow:
+The project uses the [meson build system](https://5g-mag.github.io/Getting-Started/pages/xr-media-integration-in-5g/usage/xr-player-overview.html):
+```
+pip3 install --user meson
+```
+
+Providing you have all dependencies installed, the project can be built as follow:
+
+Get the code:
 ```
 git clone https://github.com/5G-MAG/rt-xr-maf-native.git
 cd rt-xr-maf-native
-meson setup builddir
-meson install -C builddir --tags swig_cs --destdir path\to\rt-xr-unity-player\Packages\rt.xr.maf
-meson install -C builddir --tags libmaf_cs,avpipeline --destdir path\to\rt-xr-unity-player\Packages\rt.xr.maf\x86_64-w64
 ```
 
-Please take a look at the [build documentation](BUILD.md) page for onboarding and details about the build.
+Configure the project to compile for the host platform:
+```
+meson setup builddir
+```
+
+```
+meson install -C builddir --destdir dist
+```
+
+Please take a look at the [build documentation](BUILD.md) page for onboarding and details about the build such as crosscompiling using Unity Editor's Android NDK toolchain.
 
 
 ## Updating the C# SWIG wrapper for the maf API
@@ -45,12 +57,12 @@ If your contribution makes changes to the public API (factory, plugins, MAF api)
 
 ## Contributing media pipelines
 
-Media pipelines implement the MAF API to expose media access and decoding to a 3D presentation engine.
-If you intend to develop a new media pipeline, take a look at the `subprojects/avpipeline` plugin.
+
+If you intend to develop a new media pipeline, please take a look at the `subprojects/avpipeline` plugin.
 
 - Create a new meson *subproject* containing for your plugin, and declare it in the top level `meson.build` file.
-- When the XR player executes, it calls `MAF::MediaPipelineFactory::loadPluginsDir()` which looks up the given directory for dynamic libraries implementing the plugin interface `IMediaPipelineFactoryPlugin`.
 - A call to `MediaPipelineFactory::createMediaPipeline()` iterates registered plugins until a MediaPipeline is successfully created - if any - and can returned to the application.
+
 
 ### Gitflow
 
