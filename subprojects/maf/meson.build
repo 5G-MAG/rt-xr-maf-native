@@ -12,7 +12,7 @@ build_args = [
   '-DPROJECT_VERSION=' + meson.project_version(),
 ]
 
-libmaf_sources = files(['src/maf.cpp', 'src/utils.cpp'])
+libmaf_sources = files(['src/maf.cpp',  'src/factory.cpp', 'src/utils.cpp'])
 libmaf_includes = include_directories('include')
 libmaf = both_libraries(
     'maf',

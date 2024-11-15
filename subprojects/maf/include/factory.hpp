@@ -28,37 +28,18 @@ class MediaPipelineFactory {
         MediaPipelineFactory() = default;
         ~MediaPipelineFactory() = default;
 
-        static MediaPipelineFactory* getInstance(){
-            static MediaPipelineFactory instance;
-            return &instance;
-        }
-
+        static MediaPipelineFactory& getInstance();
+        
         std::map<std::string, std::function<IMediaPipeline*(void)>> registry;
+        IMediaPipeline* createMediaPipeline(MediaInfo mediaInfo, std::vector<BufferInfo> buffers);
+        void registerPlugin(std::string name, std::function<IMediaPipeline*(void)> factoryFn);
 
-        void registerPlugin(std::string name, std::function<IMediaPipeline*(void)> factoryFn){
-            registry[name] = factoryFn;
-        }
-
-        IMediaPipeline* createMediaPipeline(MediaInfo mediaInfo, std::vector<BufferInfo> buffers){
-            IMediaPipeline* res = nullptr;
-            for (auto &[name, factoryFn] : registry ){      
-                try {
-                    res = factoryFn();
-                    res->initialize(mediaInfo, buffers);
-                    return res;
-                } catch (...){
-                    delete res;
-                    res = nullptr;
-                }
-            }
-            return res;
-        }
 };
 
 template <typename T> class MediaPipelineFactoryPlugin {
     public:
         MediaPipelineFactoryPlugin(std::string name){
-            MediaPipelineFactory::getInstance()->registerPlugin(name, [](void) -> IMediaPipeline * { return new T();});
+            MediaPipelineFactory::getInstance().registerPlugin(name, [](void) -> IMediaPipeline * { return new T();});
         };
         ~MediaPipelineFactoryPlugin() = default;
 };

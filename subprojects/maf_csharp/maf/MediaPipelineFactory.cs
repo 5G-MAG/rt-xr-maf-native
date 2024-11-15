@@ -61,8 +61,7 @@ public class MediaPipelineFactory : global::System.IDisposable {
   }
 
   public static MediaPipelineFactory getInstance() {
-    global::System.IntPtr cPtr = mafPINVOKE.MediaPipelineFactory_getInstance();
-    MediaPipelineFactory ret = (cPtr == global::System.IntPtr.Zero) ? null : new MediaPipelineFactory(cPtr, false);
+    MediaPipelineFactory ret = new MediaPipelineFactory(mafPINVOKE.MediaPipelineFactory_getInstance(), false);
     return ret;
   }
 
@@ -77,16 +76,16 @@ public class MediaPipelineFactory : global::System.IDisposable {
     } 
   }
 
-  public void registerPlugin(string name, SWIGTYPE_p_std__functionT_MAF__IMediaPipeline_pfvoidF_t factoryFn) {
-    mafPINVOKE.MediaPipelineFactory_registerPlugin(swigCPtr, name, SWIGTYPE_p_std__functionT_MAF__IMediaPipeline_pfvoidF_t.getCPtr(factoryFn));
-    if (mafPINVOKE.SWIGPendingException.Pending) throw mafPINVOKE.SWIGPendingException.Retrieve();
-  }
-
   public IMediaPipeline createMediaPipeline(MediaInfo mediaInfo, BufferInfoArray buffers) {
     global::System.IntPtr cPtr = mafPINVOKE.MediaPipelineFactory_createMediaPipeline(swigCPtr, MediaInfo.getCPtr(mediaInfo), BufferInfoArray.getCPtr(buffers));
     IMediaPipeline ret = (cPtr == global::System.IntPtr.Zero) ? null : new IMediaPipeline(cPtr, false);
     if (mafPINVOKE.SWIGPendingException.Pending) throw mafPINVOKE.SWIGPendingException.Retrieve();
     return ret;
+  }
+
+  public void registerPlugin(string name, SWIGTYPE_p_std__functionT_MAF__IMediaPipeline_pfvoidF_t factoryFn) {
+    mafPINVOKE.MediaPipelineFactory_registerPlugin(swigCPtr, name, SWIGTYPE_p_std__functionT_MAF__IMediaPipeline_pfvoidF_t.getCPtr(factoryFn));
+    if (mafPINVOKE.SWIGPendingException.Pending) throw mafPINVOKE.SWIGPendingException.Retrieve();
   }
 
 }
