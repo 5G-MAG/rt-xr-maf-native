@@ -18,3 +18,7 @@ endif
 if get_option('csharp')
     subproject('maf_csharp')
 endif
+
+if get_option('allinone')
+    subproject('rtxrmaf')
+endif
