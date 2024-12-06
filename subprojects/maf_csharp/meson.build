@@ -5,7 +5,7 @@ project(
   default_options : ['warning_level=3', 'cpp_std=c++17']
 )
 
-libmaf_dep = dependency('maf', method: 'auto', fallback: ['maf', 'libmaf_dep'])
+libmaf_dep = dependency('maf', method: 'auto', static: false, fallback: ['maf', 'libmaf_dep'])
 
 cs_wrapper_sources = files(['maf.cpp'])
 cs_wrapper = both_libraries(

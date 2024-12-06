@@ -7,7 +7,7 @@ project(
 
 cxx = meson.get_compiler('cpp')
 
-libmaf_dep = dependency('libmaf', method: 'auto', fallback: ['maf', 'libmaf_dep'])
+libmaf_dep = dependency('libmaf', method: 'auto', static: false, fallback: ['maf', 'libmaf_dep'])
 
 # libav dependency taken from gstreamer's libav plugin build file
 # this loads system dependency if it exists, otherwise fallbacks to Subprojects/FFmpeg/meson.build

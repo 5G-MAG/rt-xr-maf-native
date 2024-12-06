@@ -1065,26 +1065,11 @@ class mafPINVOKE {
   [global::System.Runtime.InteropServices.DllImport("maf_cs", EntryPoint="CSharp_maf_getTime_s")]
   public static extern double getTime_s(ulong jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("maf_cs", EntryPoint="CSharp_maf_new_MediaPipelineFactory")]
-  public static extern global::System.IntPtr new_MediaPipelineFactory();
-
-  [global::System.Runtime.InteropServices.DllImport("maf_cs", EntryPoint="CSharp_maf_delete_MediaPipelineFactory")]
-  public static extern void delete_MediaPipelineFactory(global::System.Runtime.InteropServices.HandleRef jarg1);
-
-  [global::System.Runtime.InteropServices.DllImport("maf_cs", EntryPoint="CSharp_maf_MediaPipelineFactory_getInstance")]
-  public static extern global::System.IntPtr MediaPipelineFactory_getInstance();
-
-  [global::System.Runtime.InteropServices.DllImport("maf_cs", EntryPoint="CSharp_maf_MediaPipelineFactory_registry_set")]
-  public static extern void MediaPipelineFactory_registry_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
-
-  [global::System.Runtime.InteropServices.DllImport("maf_cs", EntryPoint="CSharp_maf_MediaPipelineFactory_registry_get")]
-  public static extern global::System.IntPtr MediaPipelineFactory_registry_get(global::System.Runtime.InteropServices.HandleRef jarg1);
-
   [global::System.Runtime.InteropServices.DllImport("maf_cs", EntryPoint="CSharp_maf_MediaPipelineFactory_registerPlugin")]
-  public static extern void MediaPipelineFactory_registerPlugin(global::System.Runtime.InteropServices.HandleRef jarg1, string jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
+  public static extern void MediaPipelineFactory_registerPlugin(string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
   [global::System.Runtime.InteropServices.DllImport("maf_cs", EntryPoint="CSharp_maf_MediaPipelineFactory_createMediaPipeline")]
-  public static extern global::System.IntPtr MediaPipelineFactory_createMediaPipeline(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
+  public static extern global::System.IntPtr MediaPipelineFactory_createMediaPipeline(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 }
 
 }

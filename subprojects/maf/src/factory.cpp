@@ -22,18 +22,19 @@
 
 namespace MAF {
 
-MediaPipelineFactory& MediaPipelineFactory::getInstance(){
-    static MediaPipelineFactory instance;
-    return instance;
+MediaPipelineFactory::FactoryMap& MediaPipelineFactory::GetRegistry(){
+    static MediaPipelineFactory::FactoryMap registry;
+    return registry;    
 }
 
 void MediaPipelineFactory::registerPlugin(std::string name, std::function<IMediaPipeline*(void)> factoryFn){
+    auto registry = MediaPipelineFactory::GetRegistry();
     registry[name] = factoryFn;
 }
 
 IMediaPipeline* MediaPipelineFactory::createMediaPipeline(MediaInfo mediaInfo, std::vector<BufferInfo> buffers){
     IMediaPipeline* res = nullptr;
-    for (auto &[name, factoryFn] : registry ){      
+    for (auto &[name, factoryFn] : MediaPipelineFactory::GetRegistry() ){      
         try {
             res = factoryFn();
             res->initialize(mediaInfo, buffers);

@@ -25,21 +25,22 @@ namespace MAF {
 class MediaPipelineFactory {
     
     public:
-        MediaPipelineFactory() = default;
-        ~MediaPipelineFactory() = default;
-
-        static MediaPipelineFactory& getInstance();
+        MediaPipelineFactory() = delete;
+        ~MediaPipelineFactory() = delete;
+        typedef std::map<std::string, std::function<IMediaPipeline*(void)>> FactoryMap;
         
-        std::map<std::string, std::function<IMediaPipeline*(void)>> registry;
-        IMediaPipeline* createMediaPipeline(MediaInfo mediaInfo, std::vector<BufferInfo> buffers);
-        void registerPlugin(std::string name, std::function<IMediaPipeline*(void)> factoryFn);
+        static void registerPlugin(std::string name, std::function<IMediaPipeline*(void)> factoryFn);
+        static IMediaPipeline* createMediaPipeline(MediaInfo mediaInfo, std::vector<BufferInfo> buffers);
+
+    private:
+        static FactoryMap& GetRegistry();
 
 };
 
 template <typename T> class MediaPipelineFactoryPlugin {
     public:
         MediaPipelineFactoryPlugin(std::string name){
-            MediaPipelineFactory::getInstance().registerPlugin(name, [](void) -> IMediaPipeline * { return new T();});
+            MediaPipelineFactory::registerPlugin(name, [](void) -> IMediaPipeline * { return new T();});
         };
         ~MediaPipelineFactoryPlugin() = default;
 };
