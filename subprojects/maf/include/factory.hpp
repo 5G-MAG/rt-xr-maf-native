@@ -20,30 +20,45 @@
 
 #include<maf.hpp>
 
+#define MAF_REGISTER_PLUGIN_FN(T) \
+    void RegisterMediaPipelineFactoryPlugin(){ \
+        MediaPipelineFactory::getInstance().registerPlugin(#T, [](void) -> IMediaPipeline * { return new T();}); \
+    };
+
 namespace MAF {
 
 class MediaPipelineFactory {
     
     public:
-        MediaPipelineFactory() = delete;
-        ~MediaPipelineFactory() = delete;
-        typedef std::map<std::string, std::function<IMediaPipeline*(void)>> FactoryMap;
+        MediaPipelineFactory() = default;
+        ~MediaPipelineFactory() = default;
+
+        static MediaPipelineFactory& getInstance();
         
-        static void registerPlugin(std::string name, std::function<IMediaPipeline*(void)> factoryFn);
-        static IMediaPipeline* createMediaPipeline(MediaInfo mediaInfo, std::vector<BufferInfo> buffers);
+        std::map<std::string, std::function<IMediaPipeline*(void)>> registry;
+        IMediaPipeline* createMediaPipeline(MediaInfo mediaInfo, std::vector<BufferInfo> buffers);
+        void registerPlugin(std::string name, std::function<IMediaPipeline*(void)> factoryFn);
 
-    private:
-        static FactoryMap& GetRegistry();
+};
 
+/*
+template <class T> class MediaPipelineFactoryPlugin {
+    public:
+        MediaPipelineFactoryPlugin() = default;
+        ~MediaPipelineFactoryPlugin() = default;
+        static void RegisterMediaPipelineFactoryPlugin(std::string name){
+            MediaPipelineFactory::getInstance().registerPlugin(name, [](void) -> IMediaPipeline * { return new T();});
+        };
 };
 
 template <typename T> class MediaPipelineFactoryPlugin {
     public:
         MediaPipelineFactoryPlugin(std::string name){
-            MediaPipelineFactory::registerPlugin(name, [](void) -> IMediaPipeline * { return new T();});
+            MediaPipelineFactory::getInstance().registerPlugin(name, [](void) -> IMediaPipeline * { return new T();});
         };
         ~MediaPipelineFactoryPlugin() = default;
 };
+*/
 
 }
 #endif // _MAF_FACTORY_

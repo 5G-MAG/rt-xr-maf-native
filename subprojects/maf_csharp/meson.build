@@ -12,10 +12,10 @@ cs_wrapper = both_libraries(
     'maf_cs',
     cs_wrapper_sources,
     gnu_symbol_visibility : 'default',
-    dependencies: [libmaf_dep],
-    cpp_args : ['-D__MAF_API_EXPORT'],
+    dependencies: [libmaf_dep.as_shared()],
     install : true,
-    install_tag: 'libmaf_cs'
+    install_tag: 'libmaf_cs',
+    install_dir: 'lib'
 )
 
 cs_dir = meson.current_source_dir()

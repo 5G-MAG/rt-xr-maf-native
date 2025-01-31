@@ -68,8 +68,8 @@ extern "C" {
         virtual void stopFetching();
     };
 
-    static MediaPipelineFactoryPlugin<AvMediaPipeline> avMediaPipelinePlugin("AVMediaPipeline");
-    
+    MAF_REGISTER_PLUGIN_FN(AvMediaPipeline)
+
 } // extern "C"
 
 

@@ -6,8 +6,6 @@ dist/
 .fake
 
 tests/
-
-subprojects/FFmpeg/
-subprojects/FFmpeg.wrap
+venv/
 vcpkg_installed/
 .DS_store

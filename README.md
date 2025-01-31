@@ -1,4 +1,4 @@
-<h1 align="center">Media pipelines factory and plugins implementing the Media Access Function (MAF) API</h1>
+<h1 align="center">XR Player - Media pipelines plugins</h1>
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Under_Development-yellow" alt="Under Development">
   <img src="https://img.shields.io/github/v/tag/5G-MAG/rt-xr-maf-native?label=version" alt="Version">
@@ -7,107 +7,84 @@
 
 ## Introduction
 
-This repository provides implementation of the Media Access Functions API (MAF) defined in [ISO/IEC 23090-14](https://www.iso.org/obp/ui/#iso:std:iso-iec:23090:-14:ed-1:v1:en). The Media Access Functions API allows media playback and access in the context of 3D Scene Description encoding.
+This repository provides **media pipelines** implementations supporting the 5GMAG reference tools [XR player](https://github.com/5G-MAG/rt-xr-unity-player) Unity 3D project.
 
-Additional information can be found at [xr-player-overview](https://5g-mag.github.io/Getting-Started/pages/xr-media-integration-in-5g/usage/xr-player-overview.html).
+Media pipelines are plugins for the XR Player's media player implementation implementing the Media Access Functions API (*MAF*) defined in [ISO/IEC 23090-14](https://www.iso.org/obp/ui/#iso:std:iso-iec:23090:-14:ed-1:v1:en). 
 
-The MAF API abstracts timed media fetching, exposing decoded timestamped media buffers to the 3D presentation engine.
-The media buffers may not expose video, audio, but also 3D geometry arrays or arbitrary data referenced through gltf accessors.
+The *MAF API* abstracts timed media fetching, exposing decoded timestamped media buffers to the 3D presentation engine.
 
-The implementation is organized through *subprojects*.
+The media buffers may provide video, audio, but also 3D geometry arrays or arbitrary data referenced described by accessor headers.
 
-### the core Media Application Function library
+The project is composed of the following libraries:
+- **subprojects/maf**: the MAF API implemented by media pipeline plugins - [documentation](docs/maf.md)
+- **subprojects/maf_csharp**: C# bindings for the MAF API - [documentation](docs/csharp_bindings.md)
 
-Located in *subprojects/maf*, this is the core library for the MAF API exposed by media pipelines.
-It includes a simple factory to register and retrieve media pipelines as plugins.
-
-### Media Pipeline plugins
-
-Media pipeline plugins implement the MAF API to provide playback control and expose decoded buffers.
-
-*subprojects/avpipeline* - a media pipeline which uses libav for audio/video decoding.
-
-### C# bindings for Unity
-
-Located in *subprojects/maf_csharp* 
-
-This library provides SWIG C# bindings for the MAF library, supporting the use of media pipelines for Unity 3D C# scripts.
+*Media pipeline plugins:*
+- **subprojects/avpipeline**: a generic media pipeline using *libav* for Audio/Video decoding.
+- [Writing a new media pipeline plugin](docs/plugins.md)
 
 
+## 1. cloning
 
-## Building
-
-The project uses the [meson build system](https://mesonbuild.com/). 
-The easiest way to get meson is to install it as a python package:
-```
-pip3 install --user meson
-```
-
-Providing you have all dependencies installed, the project can be built as follow:
-
-Get the code:
 ```
 git clone https://github.com/5G-MAG/rt-xr-maf-native.git
-cd rt-xr-maf-native
 ```
 
-## Building
+## 2. setup dependencies
 
-### Building Android
+### compiling for Android
 
-Configure the project for cross-compilation:
+Android API, NDK and SDK version should match the [environment setup of the Unity 3D editor's Android build support module](https://docs.unity3d.com/Manual/android-sdksetup.html).
+
+The Android build support module installed by Unity 2022 - using NDK version 23.2.8568313 - is known to work as configured in the `crossfile/android-aarch64` file.
+
+
+### meson build system
+
+The project uses the [meson build system](https://mesonbuild.com/Quick-guide.html). It can be conveniently installed in a python virtual environment using : `./scripts/install_meson.sh`
+
+
+### plugin specific dependencies
+
+#### FFmpeg 7.1
+
+the `subproject/avpipeline` plugin has a dependency on libav. When compiling the plugin meson first attempts to look for system dependency, then looks for FFmpeg as a subproject providing the dependencies.
+
+For Android, the precompiled FFmpeg libraries and headers should be copied to the dedicated subproject:
 ```
-meson setup --wipe -Ddebug=true -Dcsharp=true builddir --cross-file crossfile/android-aarch64
+subprojects/
+  avpipeline/
+  FFmpeg/
+    meson.build
+    arm64/
+      include/
+      lib/
+  maf/
+  maf_csharp/
 ```
 
-`meson setup [...] builddir`: configures the project for an out of tree build in builddir
-`--wipe` : wipe out builddir, ensure a clean build
-`-Ddebug=true` : perform a debug build
-`-Dcsharp=true` : build the C# wrapper subproject. Available options are defined in `meson_options.txt`
-`--cross-file crossfile/android-aarch64` : [cross compilation](https://mesonbuild.com/Cross-compilation.html) targeting Android
+The meson.build file should be copied from the script directory:
+`cp ./scripts/build_ffmpeg_android.meson ./subprojects/FFmpeg/meson.build`
 
-#### Android NDK compiler toolchain
-
-The sample `crossfile/android-aarch64` configuration provides an example to build using the Android NDK & compiler toolchain that comes as part of a Unity3D installation.
+> The `./scripts/build_ffmpeg_android.sh` uses a third party project [ffmpeg-android-maker](https://github.com/Javernaut/ffmpeg-android-maker) to compile ffmpeg for android and setup the dependency subproject.
 
 
-### Building for other platforms
+## 3. compile all libraries and plugins
 
-Configure the project for an out of tree build in the 'builddir' directory:
+Before compiling, edit the [crossfile](https://mesonbuild.com/Cross-compilation.html#cross-file-locations) configuration to point to your Android NDK toolchain installation's.
+
 ```
-meson setup builddir
-```
-The target OS/architecture depends on the machine's default.
-
-
-Build and install artifacts in the `dist` directory
-```
-meson install -C builddir --destdir dist
+./scripts/build_android.sh
 ```
 
-Please take a look at the [build documentation](BUILD.md) page for onboarding and details about the build such as crosscompiling using Unity Editor's Android NDK toolchain.
+the script generates a **debug** build.
 
+## 4. copy libraries, plugins, and dependencies to the Unity project
 
-## Using in a Unity Project and debuging on Device
-
-...
-
-
-## Updating the C# SWIG wrapper for the maf API
-
-Generating the C# bindings is documented in [subprojects/maf_csharp/README.md].
-
-If your contribution makes changes to the public API (factory, plugins, MAF api), make sure to re-generate the SWIG wrappers.
-
-
-
-## Contributing media pipelines
-
-
-If you intend to develop a new media pipeline, please take a look at the `subprojects/avpipeline` plugin.
-
-- Create a new meson *subproject* containing for your plugin, and declare it in the top level `meson.build` file.
-- A call to `MediaPipelineFactory::createMediaPipeline()` iterates registered plugins until a MediaPipeline is successfully created - if any - and can returned to the application.
+Run the installation script for android, passing installation directory as an argument:
+```
+./scripts/install_android.sh ../rt-xr-unity-player/Packages/rt.xr.maf
+```
 
 
 ### Gitflow
@@ -118,15 +95,8 @@ The `development` branch of this project serves as an integration branch for new
 
 Consequently, please make sure to switch to the `development` branch before starting the implementation of a new feature.
 
-### pre_commit hook
 
-Contributors are encouraged to use the provided *pre_commit* hook which builds and tests before each commit.
-```
-cp pre_commit_hook.sh .git/hooks/pre_commit
-```
+### Licenses
 
-### Running tests
+This project is provided under 5G-MAG's Public License. For the full license terms, please see the LICENSE file distributed along with the repository or retrieve it from [here](https://drive.google.com/file/d/1cinCiA778IErENZ3JN52VFW-1ffHpx7Z/view).
 
-```
-meson test -C builddir
-```

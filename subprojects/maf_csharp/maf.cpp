@@ -4532,49 +4532,103 @@ SWIGEXPORT double SWIGSTDCALL CSharp_maf_getTime_s(unsigned long long jarg1) {
 }
 
 
-SWIGEXPORT void SWIGSTDCALL CSharp_maf_MediaPipelineFactory_registerPlugin(const char * jarg1, void * jarg2) {
-  std::string arg1 ;
-  SwigValueWrapper< std::function< MAF::IMediaPipeline *(void) > > arg2 ;
-  std::function< MAF::IMediaPipeline *(void) > *argp2 ;
+SWIGEXPORT void * SWIGSTDCALL CSharp_maf_new_MediaPipelineFactory() {
+  void * jresult ;
+  MAF::MediaPipelineFactory *result = 0 ;
   
-  if (!jarg1) {
-    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "null string", 0);
-    return ;
-  }
-  (&arg1)->assign(jarg1); 
-  argp2 = (std::function< MAF::IMediaPipeline *(void) > *)jarg2; 
-  if (!argp2) {
-    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "Attempt to dereference null std::function< MAF::IMediaPipeline *(void) >", 0);
-    return ;
-  }
-  arg2 = *argp2; 
-  MAF::MediaPipelineFactory::registerPlugin(SWIG_STD_MOVE(arg1),SWIG_STD_MOVE(arg2));
+  result = (MAF::MediaPipelineFactory *)new MAF::MediaPipelineFactory();
+  jresult = (void *)result; 
+  return jresult;
 }
 
 
-SWIGEXPORT void * SWIGSTDCALL CSharp_maf_MediaPipelineFactory_createMediaPipeline(void * jarg1, void * jarg2) {
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_delete_MediaPipelineFactory(void * jarg1) {
+  MAF::MediaPipelineFactory *arg1 = (MAF::MediaPipelineFactory *) 0 ;
+  
+  arg1 = (MAF::MediaPipelineFactory *)jarg1; 
+  delete arg1;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_maf_MediaPipelineFactory_getInstance() {
   void * jresult ;
-  MAF::MediaInfo arg1 ;
-  std::vector< MAF::BufferInfo > arg2 ;
-  MAF::MediaInfo *argp1 ;
-  std::vector< MAF::BufferInfo > *argp2 ;
+  MAF::MediaPipelineFactory *result = 0 ;
+  
+  result = (MAF::MediaPipelineFactory *) &MAF::MediaPipelineFactory::getInstance();
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_MediaPipelineFactory_registry_set(void * jarg1, void * jarg2) {
+  MAF::MediaPipelineFactory *arg1 = (MAF::MediaPipelineFactory *) 0 ;
+  std::map< std::string,std::function< MAF::IMediaPipeline *(void) > > *arg2 = (std::map< std::string,std::function< MAF::IMediaPipeline *(void) > > *) 0 ;
+  
+  arg1 = (MAF::MediaPipelineFactory *)jarg1; 
+  arg2 = (std::map< std::string,std::function< MAF::IMediaPipeline *(void) > > *)jarg2; 
+  if (arg1) (arg1)->registry = *arg2;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_maf_MediaPipelineFactory_registry_get(void * jarg1) {
+  void * jresult ;
+  MAF::MediaPipelineFactory *arg1 = (MAF::MediaPipelineFactory *) 0 ;
+  std::map< std::string,std::function< MAF::IMediaPipeline *(void) > > *result = 0 ;
+  
+  arg1 = (MAF::MediaPipelineFactory *)jarg1; 
+  result = (std::map< std::string,std::function< MAF::IMediaPipeline *(void) > > *)& ((arg1)->registry);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_maf_MediaPipelineFactory_createMediaPipeline(void * jarg1, void * jarg2, void * jarg3) {
+  void * jresult ;
+  MAF::MediaPipelineFactory *arg1 = (MAF::MediaPipelineFactory *) 0 ;
+  MAF::MediaInfo arg2 ;
+  std::vector< MAF::BufferInfo > arg3 ;
+  MAF::MediaInfo *argp2 ;
+  std::vector< MAF::BufferInfo > *argp3 ;
   MAF::IMediaPipeline *result = 0 ;
   
-  argp1 = (MAF::MediaInfo *)jarg1; 
-  if (!argp1) {
+  arg1 = (MAF::MediaPipelineFactory *)jarg1; 
+  argp2 = (MAF::MediaInfo *)jarg2; 
+  if (!argp2) {
     SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "Attempt to dereference null MAF::MediaInfo", 0);
     return 0;
   }
-  arg1 = *argp1; 
-  argp2 = (std::vector< MAF::BufferInfo > *)jarg2; 
-  if (!argp2) {
+  arg2 = *argp2; 
+  argp3 = (std::vector< MAF::BufferInfo > *)jarg3; 
+  if (!argp3) {
     SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "Attempt to dereference null std::vector< MAF::BufferInfo >", 0);
     return 0;
   }
-  arg2 = *argp2; 
-  result = (MAF::IMediaPipeline *)MAF::MediaPipelineFactory::createMediaPipeline(SWIG_STD_MOVE(arg1),SWIG_STD_MOVE(arg2));
+  arg3 = *argp3; 
+  result = (MAF::IMediaPipeline *)(arg1)->createMediaPipeline(arg2,arg3);
   jresult = (void *)result; 
   return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_MediaPipelineFactory_registerPlugin(void * jarg1, const char * jarg2, void * jarg3) {
+  MAF::MediaPipelineFactory *arg1 = (MAF::MediaPipelineFactory *) 0 ;
+  std::string arg2 ;
+  SwigValueWrapper< std::function< MAF::IMediaPipeline *(void) > > arg3 ;
+  std::function< MAF::IMediaPipeline *(void) > *argp3 ;
+  
+  arg1 = (MAF::MediaPipelineFactory *)jarg1; 
+  if (!jarg2) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "null string", 0);
+    return ;
+  }
+  (&arg2)->assign(jarg2); 
+  argp3 = (std::function< MAF::IMediaPipeline *(void) > *)jarg3; 
+  if (!argp3) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "Attempt to dereference null std::function< MAF::IMediaPipeline *(void) >", 0);
+    return ;
+  }
+  arg3 = *argp3; 
+  (arg1)->registerPlugin(arg2,arg3);
 }
 
 
