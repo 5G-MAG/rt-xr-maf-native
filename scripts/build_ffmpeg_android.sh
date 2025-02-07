@@ -16,7 +16,7 @@ BASEDIR=$(dirname $0)/..
 
 # Build ffmpeg for android arm64 with mediacodec support
 cd $BASEDIR/../../ffmpeg-android-maker
-# ./ffmpeg_android_maker.sh --enable-mediacodec --enable-jni
+# ./ffmpeg-android-maker.sh --enable-mediacodec --enable-jni
 
 # Copy the build artifacts to a meson subprojects, 
 # so that meson can use it as a fallback to the default lookup method
