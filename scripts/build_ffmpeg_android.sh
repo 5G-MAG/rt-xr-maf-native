@@ -3,7 +3,7 @@
 if [ -z ${ANDROID_SDK_HOME} ]; then 
     echo "ANDROID_SDK_HOME is not set" && exit 1; 
 else 
-    echo "ANDROID_NDK_HOME set to '$ANDROID_SDK_HOME'"; 
+    echo "ANDROID_SDK_HOME set to '$ANDROID_SDK_HOME'"; 
 fi
 
 if [ -z ${ANDROID_NDK_HOME} ]; then 
