@@ -1,22 +1,25 @@
 #!/bin/bash
 
-if [ -z ${ANDROID_SDK_HOME} ]; then 
-    echo "ANDROID_SDK_HOME is not set" && exit 1; 
+set -e 
+
+if [ -d "$ANDROID_SDK_HOME" ]; then 
+    echo "ANDROID_NDK_HOME set to '$ANDROID_SDK_HOME'"; 
 else 
-    echo "ANDROID_SDK_HOME set to '$ANDROID_SDK_HOME'"; 
+    echo "ANDROID_SDK_HOME is not set / a valid directory" && exit 1; 
 fi
 
-if [ -z ${ANDROID_NDK_HOME} ]; then 
-    echo "ANDROID_NDK_HOME is not set" && exit 1; 
-else 
+if [ -d "$ANDROID_NDK_HOME" ]; then 
     echo "ANDROID_NDK_HOME set to '$ANDROID_NDK_HOME'"; 
+else 
+    echo "ANDROID_NDK_HOME is not set / a valid directory" && exit 1; 
 fi
 
 BASEDIR=$(dirname $0)/..
 
 # Build ffmpeg for android arm64 with mediacodec support
-cd $BASEDIR/../../ffmpeg-android-maker
-# ./ffmpeg-android-maker.sh --enable-mediacodec --enable-jni
+cd $BASEDIR/../ffmpeg-android-maker
+
+./ffmpeg-android-maker.sh --enable-mediacodec --enable-jni
 
 # Copy the build artifacts to a meson subprojects, 
 # so that meson can use it as a fallback to the default lookup method

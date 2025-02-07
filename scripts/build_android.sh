@@ -3,7 +3,14 @@ BASEDIR=$(dirname $0)/..
 CWD=$(pwd)
 
 if [ -d "$BASEDIR/venv" ]; then
-    source $BASEDIR/venv/bin/activate
+    # activate the virtual environment used by install_meson.sh
+    # on windows, assume gitbash
+    if [[ "$OSTYPE" == "msys" ]]; then
+        source $BASEDIR/venv/Scripts/activate
+    else
+        # mac / linux
+        source $BASEDIR/venv/bin/activate
+    fi
 fi
 
 ARCH=android-aarch64
