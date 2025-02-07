@@ -1,0 +1,16 @@
+{
+    "dependencies": [
+      {
+        "name": "ffmpeg",
+        "features": [
+            "all"
+        ]
+      }
+    ],
+    "overrides": [
+      { 
+        "name": "ffmpeg", 
+        "version": "7.1" 
+      }
+    ]
+}
