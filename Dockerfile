@@ -41,23 +41,26 @@ RUN ${ANDROID_SDK_HOME}/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_SDK_HO
 RUN yes | ${ANDROID_SDK_HOME}/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_SDK_HOME} "ndk;${VERSION_NDK}"
 
 WORKDIR ${ROOT_DIR}/ffmpeg-android-maker
-# Build FFmpeg
-RUN git clone https://github.com/Javernaut/ffmpeg-android-maker.git .
-
+RUN git clone --depth 1 --branch v2.12 https://github.com/Javernaut/ffmpeg-android-maker.git .
+COPY scripts/mediacodec.patch mediacodec.patch
+RUN git apply mediacodec.patch
 RUN ./ffmpeg-android-maker.sh
 
 COPY .  ${ROOT_DIR}/rt-xr-maf
 WORKDIR ${ROOT_DIR}/rt-xr-maf
 
-# Populate ./subprojects/FFmpeg 
-RUN rm -rf ./subprojects/FFmpeg
-RUN mkdir -p ./subprojects/FFmpeg/arm64-v8a/lib
-RUN mkdir -p ./subprojects/FFmpeg/arm64-v8a/include
-RUN cp ./scripts/build_ffmpeg_android.meson ./subprojects/FFmpeg/meson.build
+RUN mkdir -p ./subprojects/FFmpeg/arm64-v8a/lib && mkdir -p ./subprojects/FFmpeg/arm64-v8a/include
+RUN cp ./scripts/ffmpeg_android.meson.build ./subprojects/FFmpeg/meson.build
 RUN cp -r ${ROOT_DIR}/ffmpeg-android-maker/output/lib/arm64-v8a/* ./subprojects/FFmpeg/arm64-v8a/lib
 RUN cp -r ${ROOT_DIR}/ffmpeg-android-maker/output/include/arm64-v8a/* ./subprojects/FFmpeg/arm64-v8a/include
 
 RUN meson setup --wipe -Ddebug=true -Dlibmaf=true -Dcsharp=true -Davpipeline=true ./builddir/android-aarch64 --cross-file ./crossfile/android-aarch64-docker
-## RUN meson compile -C ./builddir/android-aarch64
-## 
-## CMD [ "${ROOT_DIR}/rt-xr-maf/scripts/install_android.sh", "/mnt/rt.xr.maf" ]
+RUN meson compile -C ./builddir/android-aarch64
+
+## @TODO: SWIG bindings
+# WORKDIR /root/swig
+# RUN sudo apt-get install build-essential libpcre2-dev libpcre3-dev autoconf automake libtool bison libboost-dev
+# RUN git clone https://github.com/swig/swig.git .
+# RUN ./autogen.sh && ./configure && make
+
+CMD [ "/bin/sh", "-c", "./scripts/install_android.sh /install"]

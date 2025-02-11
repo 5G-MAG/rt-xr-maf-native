@@ -23,6 +23,19 @@ The project is composed of the following libraries:
 - **subprojects/avpipeline**: a generic media pipeline using *libav* for Audio/Video decoding.
 - [Writing a new media pipeline plugin](docs/plugins.md)
 
+## Build and install using docker
+
+```
+# Get the source
+git clone https://github.com/5G-MAG/rt-xr-maf-native.git 
+
+# Build everything into a docker container
+cd rt-xr-maf-native
+docker build -t maf:builder .
+
+# Copy build artifacts into a local directory
+docker run --mount=type=bind,source=$(pwd)/Packages/rt.xr.maf,target=/install -it maf:builder
+```
 
 ## 1. Cloning
 
