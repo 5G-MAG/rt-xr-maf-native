@@ -37,4 +37,4 @@ else
     mkdir -p $DESTDIR/dependencies/libc++/android/arm64
 fi
 
-cp $ANDROID_NDK_HOME/sources/cxx-stl/llvm-libc++/libs/arm64-v8a/libc++_shared.so $DESTDIR/dependencies/libc++/android/arm64/libc++_shared.so
+cp $ANDROID_NDK_HOME/sources/cxx-stl/llvm-libc++/libs/arm64-v8a/libc++_shared.so $DESTDIR/dependencies/libc++/android/arm64
