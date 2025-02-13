@@ -1,4 +1,4 @@
-<h1 align="center">Media pipelines factory and plugins implementing the Media Access Function (MAF) API</h1>
+<h1 align="center">XR Player - Media pipelines plugins</h1>
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Under_Development-yellow" alt="Under Development">
   <img src="https://img.shields.io/github/v/tag/5G-MAG/rt-xr-maf-native?label=version" alt="Version">
@@ -6,51 +6,99 @@
 </p>
 
 ## Introduction
-This repository provides implementation of the Media Access Functions API (MAF) defined in [ISO/IEC 23090-14](https://www.iso.org/obp/ui/#iso:std:iso-iec:23090:-14:ed-1:v1:en). The Media Access Functions API allows media playback and access in the context of 3D Scene Description encoding.
 
-The project is a dependency of [`rt-xr-unity-player`](https://github.com/5G-MAG/rt-xr-unity-player), providing the build artifacts for [`rt-xr-maf-plugin`](https://github.com/5G-MAG/rt-xr-maf-plugin).
+This repository provides **media pipelines** implementations supporting the 5G-MAG Reference Tools [XR player](https://github.com/5G-MAG/rt-xr-unity-player) Unity 3D project.
 
-Additional information can be found at: https://5g-mag.github.io/Getting-Started/pages/xr-media-integration-in-5g/
+Media pipelines are plugins for the XR Player's media player implementation of the Media Access Functions API (*MAF*) defined in [ISO/IEC 23090-14](https://www.iso.org/obp/ui/#iso:std:iso-iec:23090:-14:ed-1:v1:en). 
 
-### About the implementation
-The implementation is organized through *subprojects*:
-- **subprojects/maf**: the core library implementing the MAF API, along with a media pipeline factory.
-- **subprojects/maf_csharp**: SWIG C# bindings.
-- **subprojects/avpipeline**: a media pipeline which uses libav for audio/video decoding.
+The *MAF API* abstracts timed media fetching, exposing decoded timestamped media buffers to the 3D presentation engine.
 
-The project currently supports win64.
+The media buffers may provide video, audio, but also 3D geometry arrays or arbitrary data referenced described by accessor headers.
 
-Contributions to support additional platforms are welcome.
+The project is composed of the following libraries:
+- **subprojects/maf**: the MAF API implemented by media pipeline plugins - [documentation](docs/maf.md)
+- **subprojects/maf_csharp**: C# bindings for the MAF API - [documentation](docs/csharp_bindings.md)
 
-## Building
+*Media pipeline plugins:*
+- **subprojects/avpipeline**: a generic media pipeline using *libav* for Audio/Video decoding.
+- [Writing a new media pipeline plugin](docs/plugins.md)
 
-Providing you have all dependencies installed, the project can be built and installed on windows as follow:
+## Build and install using docker
+
+```
+# Get the source
+git clone https://github.com/5G-MAG/rt-xr-maf-native.git 
+
+# Build everything into a docker container
+cd rt-xr-maf-native
+docker build -t maf:builder .
+
+# Copy build artifacts into a local directory
+docker run --mount=type=bind,source=$(pwd)/Packages/rt.xr.maf,target=/install -it maf:builder
+```
+
+## 1. Cloning
+
 ```
 git clone https://github.com/5G-MAG/rt-xr-maf-native.git
-cd rt-xr-maf-native
-meson setup builddir
-meson install -C builddir --tags swig_cs --destdir path\to\rt-xr-unity-player\Packages\rt.xr.maf
-meson install -C builddir --tags libmaf_cs,avpipeline --destdir path\to\rt-xr-unity-player\Packages\rt.xr.maf\x86_64-w64
 ```
 
-Please take a look at the [build documentation](BUILD.md) page for onboarding and details about the build.
+## 2. Setup dependencies
+
+### Compiling for Android
+
+Android API, NDK and SDK version should match the [environment setup of the Unity 3D editor's Android build support module](https://docs.unity3d.com/Manual/android-sdksetup.html).
+
+The Android build support module installed by Unity 2022 - using NDK version 23.2.8568313 - is known to work as configured in the `crossfile/android-aarch64` file.
 
 
-## Updating the C# SWIG wrapper for the maf API
+### meson build system
 
-Generating the C# bindings is documented in [subprojects/maf_csharp/README.md].
-
-If your contribution makes changes to the public API (factory, plugins, MAF api), make sure to re-generate the SWIG wrappers.
+The project uses the [meson build system](https://mesonbuild.com/Quick-guide.html). It can be conveniently installed in a python virtual environment using : `./scripts/install_meson.sh`
 
 
-## Contributing media pipelines
+### Plugin specific dependencies
 
-Media pipelines implement the MAF API to expose media access and decoding to a 3D presentation engine.
-If you intend to develop a new media pipeline, take a look at the `subprojects/avpipeline` plugin.
+#### FFmpeg 7.1
 
-- Create a new meson *subproject* containing for your plugin, and declare it in the top level `meson.build` file.
-- When the XR player executes, it calls `MAF::MediaPipelineFactory::loadPluginsDir()` which looks up the given directory for dynamic libraries implementing the plugin interface `IMediaPipelineFactoryPlugin`.
-- A call to `MediaPipelineFactory::createMediaPipeline()` iterates registered plugins until a MediaPipeline is successfully created - if any - and can returned to the application.
+The `subproject/avpipeline` plugin has a dependency on libav. When compiling the plugin meson first attempts to look for system dependency, then looks for FFmpeg as a subproject providing the dependencies.
+
+For Android, the precompiled FFmpeg libraries and headers should be copied to the dedicated subproject:
+```
+subprojects/
+  avpipeline/
+  FFmpeg/
+    meson.build
+    arm64/
+      include/
+      lib/
+  maf/
+  maf_csharp/
+```
+
+The meson.build file should be copied from the script directory:
+`cp ./scripts/build_ffmpeg_android.meson ./subprojects/FFmpeg/meson.build`
+
+> The `./scripts/build_ffmpeg_android.sh` uses a third party project [ffmpeg-android-maker](https://github.com/Javernaut/ffmpeg-android-maker) to compile ffmpeg for android and setup the dependency subproject. Please check the script in order to download the dependency in the right path.
+
+
+## 3. Compile all libraries and plugins
+
+Before compiling, edit the [crossfile](https://mesonbuild.com/Cross-compilation.html#cross-file-locations) configuration to point to your Android NDK toolchain installation's.
+
+```
+./scripts/build_android.sh
+```
+
+the script generates a **debug** build.
+
+## 4. Copy libraries, plugins, and dependencies to the Unity project
+
+Run the installation script for android, passing installation directory as an argument:
+```
+./scripts/install_android.sh ../rt-xr-unity-player/Packages/rt.xr.maf
+```
+
 
 ### Gitflow
 
@@ -60,15 +108,8 @@ The `development` branch of this project serves as an integration branch for new
 
 Consequently, please make sure to switch to the `development` branch before starting the implementation of a new feature.
 
-### pre_commit hook
 
-Contributors are encouraged to use the provided *pre_commit* hook which builds and tests before each commit.
-```
-cp pre_commit_hook.sh .git/hooks/pre_commit
-```
+### Licenses
 
-### Running tests
+This project is provided under 5G-MAG's Public License. For the full license terms, please see the LICENSE file distributed along with the repository or retrieve it from [here](https://drive.google.com/file/d/1cinCiA778IErENZ3JN52VFW-1ffHpx7Z/view).
 
-```
-meson test -C builddir
-```

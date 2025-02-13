@@ -44,7 +44,7 @@ extern "C"
 
 // Attempt to reformat the decoded buffer to match the expected buffer layout
 // Sample format and channel layout (planar/interleaved) is adressed, sample rate remains unchanged.
-#define ENABLE_AUDIO_RESAMPLING 1
+#define ENABLE_AUDIO_RESAMPLING 0
 
 using ms = std::chrono::duration<double, std::milli>;
 
@@ -343,7 +343,6 @@ inline void copyAudioSamples(uint8_t ** src, int srcSampleOffset, uint8_t * dst,
     if(numChannels == 1){
         memcpy(dst + dstByteOffset, src[0] + srcByteOffset, chanByteLength);
     }
-    // FIXME: numChannels > 1 not tested
     else if (packedChannels)
     {
         srcByteOffset *= numChannels;
@@ -352,7 +351,7 @@ inline void copyAudioSamples(uint8_t ** src, int srcSampleOffset, uint8_t * dst,
     }
     else
     {
-        for (int ch = 0; ch++; numChannels)
+        for (int ch = 0; ch < numChannels; ch++)
         {
             memcpy(dst + dstByteOffset, src[ch] + srcByteOffset, chanByteLength);
             dstByteOffset += chanByteLength;
@@ -367,7 +366,7 @@ inline void setResamplerOutput(uint8_t** out, uint8_t* data, std::vector<BufferI
     if (headers->at(0).bufferViewByteStride == 0)
     {
         // mono-channel or planar buffer format
-        for (int h = 0; h < headers->size(); h++)
+        for (size_t h = 0; h < headers->size(); h++)
         {
             out[h] = data + headers->at(h).byteOffset + offset;
         }
@@ -384,7 +383,7 @@ inline void setResamplerOutput(uint8_t** out, uint8_t* data, std::vector<BufferI
     if (bufferInfo->at(0).stride == 0)
     {
         // mono-channel or planar buffer format
-        for (int i = 0; i < bufferInfo->size(); i++)
+        for (size_t i = 0; i < bufferInfo->size(); i++)
         {
             out[i] = data + bufferInfo->at(i).offset + offset;
         }
@@ -453,9 +452,8 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
     }
     int outputSampleSize = componentSize(bufferInfo.at(0).componentType);
     int outputNumChannels = (int)bufferInfo.size();
-    bool outputPackedChannels = bufferInfo.at(0).stride > 0;
-    bool planar = bufferInfo.size() > 1 && !outputPackedChannels;
-    AVSampleFormat outputSampleFmt = GetAVSampleFormat(bufferInfo.at(0).componentType, planar);
+    bool planarAudioFormat = outputNumChannels > 1 ? bufferInfo.at(0).stride > 0 : true;
+    AVSampleFormat outputSampleFmt = GetAVSampleFormat(bufferInfo.at(0).componentType, planarAudioFormat);
 
     /*
         Normaly, the maf frame audio buffer is filled entirely with samples, and sample count can be derived from buffer format and size. 
@@ -476,7 +474,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
     if (codecCtx_->sample_fmt != outputSampleFmt){
         needsResampling = true;
     }
-    if (outputPackedChannels && av_sample_fmt_is_planar(codecCtx_->sample_fmt)){
+    if (av_sample_fmt_is_planar(codecCtx_->sample_fmt) && !planarAudioFormat){
         needsResampling = true;
     }
     if (needsResampling){
@@ -597,7 +595,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
                             {
                                 h.count = count;
                             }
-                            if (outputPackedChannels)
+                            if (!planarAudioFormat)
                             {
                                 BufferInfoHeader::ComputeAccessorsHeadersInterleaved(headers);
                             }
@@ -632,13 +630,13 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
 #endif
                         } else {
                             if(useAccessorHeaders_){
-                                copyAudioSamples(avFrame->data, 0, pData, 0, avFrame->nb_samples, outputSampleSize, outputNumChannels, outputPackedChannels);
+                                copyAudioSamples(avFrame->data, 0, pData, 0, avFrame->nb_samples, outputSampleSize, outputNumChannels, !planarAudioFormat);
                                 dstSamplesWritten = dstSampleCapacity;
                                 av_frame_unref(avFrame);
                                 srcSamplesRead = -1;
                             } else {
                                 int numSamples = std::min(avFrame->nb_samples-srcSamplesRead, dstSampleCapacity-dstSamplesWritten);
-                                copyAudioSamples(avFrame->data, srcSamplesRead, pData, dstSamplesWritten, numSamples, outputSampleSize, outputNumChannels, outputPackedChannels);
+                                copyAudioSamples(avFrame->data, srcSamplesRead, pData, dstSamplesWritten, numSamples, outputSampleSize, outputNumChannels, !planarAudioFormat);
                                 srcSamplesRead += numSamples;
                                 dstSamplesWritten += numSamples;
                                 if(srcSamplesRead == avFrame->nb_samples){
