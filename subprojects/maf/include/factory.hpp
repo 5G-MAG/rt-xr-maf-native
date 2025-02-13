@@ -14,59 +14,51 @@
 #ifndef _MAF_FACTORY_
 #define _MAF_FACTORY_
 
-#include<string.h>
+#include<string>
+#include<map>
+#include<functional>
 
-#include<filesystem>
 #include<maf.hpp>
 
-#ifdef _WIN32
-    #include <Windows.h>
-#else
-    #include <dlfcn.h>
-#endif
+#define MAF_REGISTER_PLUGIN_FN(T) \
+    void RegisterMediaPipelineFactoryPlugin(){ \
+        MediaPipelineFactory::getInstance().registerPlugin(#T, [](void) -> IMediaPipeline * { return new T();}); \
+    };
 
 namespace MAF {
 
-#ifdef _WIN32
-    typedef HMODULE DL_HANDLE;
-#else
-    typedef void* DL_HANDLE;
-#endif
-
-class IMediaPipelineFactoryPlugin
-{ 
-    public:
-        virtual ~IMediaPipelineFactoryPlugin()=default;
-        virtual IMediaPipeline* createMediaPipeline()=0;
-};
-
-template <typename T> class MediaPipelineFactoryPlugin : IMediaPipelineFactoryPlugin {
-    public:
-         MediaPipelineFactoryPlugin() = default;
-        ~MediaPipelineFactoryPlugin() = default;
-
-        IMediaPipeline* createMediaPipeline() {
-            return new T();
-        }
-};
-
 class MediaPipelineFactory {
     
-    private:
-        std::vector<DL_HANDLE> handles_; 
-
     public:
         MediaPipelineFactory() = default;
-        ~MediaPipelineFactory();
-        std::vector<IMediaPipelineFactoryPlugin*> plugins;
-        void loadPluginsDir(char * plugin_dir = nullptr);
-        void loadPluginDL(char * dll);
+        ~MediaPipelineFactory() = default;
+
+        static MediaPipelineFactory& getInstance();
+        
+        std::map<std::string, std::function<IMediaPipeline*(void)>> registry;
         IMediaPipeline* createMediaPipeline(MediaInfo mediaInfo, std::vector<BufferInfo> buffers);
+        void registerPlugin(std::string name, std::function<IMediaPipeline*(void)> factoryFn);
+
 };
 
-typedef void (*RegisterFactoryPluginFn)(MediaPipelineFactory*);
+/*
+template <class T> class MediaPipelineFactoryPlugin {
+    public:
+        MediaPipelineFactoryPlugin() = default;
+        ~MediaPipelineFactoryPlugin() = default;
+        static void RegisterMediaPipelineFactoryPlugin(std::string name){
+            MediaPipelineFactory::getInstance().registerPlugin(name, [](void) -> IMediaPipeline * { return new T();});
+        };
+};
 
-const std::string fpFnName = "RegisterFactoryPlugin";
+template <typename T> class MediaPipelineFactoryPlugin {
+    public:
+        MediaPipelineFactoryPlugin(std::string name){
+            MediaPipelineFactory::getInstance().registerPlugin(name, [](void) -> IMediaPipeline * { return new T();});
+        };
+        ~MediaPipelineFactoryPlugin() = default;
+};
+*/
 
 }
 #endif // _MAF_FACTORY_

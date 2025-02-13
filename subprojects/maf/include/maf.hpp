@@ -20,10 +20,22 @@
 #include<mutex>
 #include<condition_variable>
 
-#ifdef __MAFAPI_EXPORT
-    #define MAFAPI __declspec(dllexport)
+#if defined(_MSC_VER)
+    #define EXPORT __declspec(dllexport)
+    #define IMPORT __declspec(dllimport)
+#elif defined(__GNUC__)
+    #define EXPORT __attribute__((visibility("default")))
+    #define IMPORT
 #else
-    #define MAFAPI __declspec(dllimport)
+    #define EXPORT
+    #define IMPORT
+    #pragma warning Unknown dynamic link import/export semantics.
+#endif
+
+#if MAF_API_BUILD
+    #define MAF_API EXPORT
+#else
+    #define MAF_API IMPORT
 #endif
 
 namespace MAF {
@@ -241,7 +253,7 @@ extern int sampleSize(SampleType st);
 #ifdef SWIG_BINDINGS
 class BufferInfoHeader
 #else
-class MAFAPI BufferInfoHeader
+class MAF_API BufferInfoHeader
 #endif
 {
     public:

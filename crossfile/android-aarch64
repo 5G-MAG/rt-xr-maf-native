@@ -1,0 +1,13 @@
+[binaries]
+ar = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar']
+c = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android28-clang']
+cpp = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android28-clang++']
+c_ld = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/ld.lld']
+cpp_ld = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/ld.lld']
+strip = ['/Applications/Unity/Hub/Editor/2022.3.34f1/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-strip']
+
+[host_machine]
+system = 'android'
+cpu_family = 'aarch64'
+cpu = 'armv8'
+endian = 'little'

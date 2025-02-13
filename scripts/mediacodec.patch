@@ -1,0 +1,44 @@
+diff --git a/scripts/ffmpeg/build.sh b/scripts/ffmpeg/build.sh
+index 620d1c9..e3bc2e8 100755
+--- a/scripts/ffmpeg/build.sh
++++ b/scripts/ffmpeg/build.sh
+@@ -48,6 +48,39 @@ EXTRA_LDFLAGS="-Wl,-z,max-page-size=16384 $DEP_LD_FLAGS"
+   --enable-shared \
+   --disable-static \
+   --disable-vulkan \
++  --enable-mediacodec \
++  --enable-decoder=hevc_mediacodec \
++  --enable-optimizations \
++  --enable-pic \
++  --enable-jni \
++  --enable-swscale \
++  --enable-pthreads \
++  --enable-v4l2-m2m \
++  --disable-programs \
++  --disable-postproc \
++  --disable-doc \
++  --disable-htmlpages \
++  --disable-manpages \
++  --disable-podpages \
++  --disable-txtpages \
++  --disable-sndio \
++  --disable-schannel \
++  --disable-securetransport \
++  --disable-xlib \
++  --disable-cuda \
++  --disable-cuvid \
++  --disable-nvenc \
++  --disable-vaapi \
++  --disable-vdpau \
++  --disable-videotoolbox \
++  --disable-audiotoolbox \
++  --disable-appkit \
++  --disable-alsa \
++  --disable-cuda \
++  --disable-cuvid \
++  --disable-nvenc \
++  --disable-vaapi \
++  --disable-vdpau \
+   --pkg-config=${PKG_CONFIG_EXECUTABLE} \
+   ${EXTRA_BUILD_CONFIGURATION_FLAGS} \
+   $ADDITIONAL_COMPONENTS || exit 1

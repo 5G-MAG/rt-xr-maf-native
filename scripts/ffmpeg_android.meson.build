@@ -1,0 +1,43 @@
+project('ffmpeg libraries', 'cpp')
+
+# intended to use pre-built binaries rather than building libav from scratch
+# see: https://mesonbuild.com/Shipping-prebuilt-binaries-as-wraps.html
+# meson first looks up for the dependency installed on the system (eg. on windows, mac, linux)
+# if it is not found (eg. in the case of android arm64-v8a target), then it falls back to this definition
+
+ffmpeg_include = include_directories('arm64-v8a/include')
+ffmpeg_lib_dir = [
+    join_paths(meson.current_source_dir(), 'arm64-v8a/lib'),
+    join_paths(meson.current_source_dir(), 'bin/')
+]
+
+cxx = meson.get_compiler('cpp')
+libavformat_dep = declare_dependency(
+    dependencies : cxx.find_library('avformat', required: true, dirs : ffmpeg_lib_dir), 
+    include_directories : ffmpeg_include, 
+    version: '61.7.100'
+)
+
+libavutil_dep = declare_dependency( 
+    dependencies : cxx.find_library('avutil', required: true, dirs : ffmpeg_lib_dir ), 
+    include_directories : ffmpeg_include, 
+    version: '59.39.100'
+)
+
+libavcodec_dep = declare_dependency( 
+    dependencies : cxx.find_library('avcodec', required: true, dirs : ffmpeg_lib_dir ), 
+    include_directories : ffmpeg_include, 
+    version: '61.19.100'
+)
+
+libswscale_dep = declare_dependency( 
+    dependencies : cxx.find_library('swscale', required: true, dirs : ffmpeg_lib_dir ), 
+    include_directories : ffmpeg_include, 
+    version: '8.3.100'
+)
+
+libswresample_dep = declare_dependency( 
+    dependencies : cxx.find_library('swresample', required: true, dirs : ffmpeg_lib_dir ), 
+    include_directories : ffmpeg_include, 
+    version: '5.3.100' 
+)

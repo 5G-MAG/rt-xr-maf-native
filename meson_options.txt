@@ -1,3 +1,0 @@
-option('libmaf', type : 'boolean', value : true, description: 'build libmaf')
-option('csharp', type : 'boolean', value : true, description: 'build csharp bindings')
-option('avpipeline', type : 'boolean', value : true, description: 'build avpipeline plugin')

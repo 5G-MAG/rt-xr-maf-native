@@ -31,7 +31,6 @@ namespace std {
   %template(MediaLocationArray) vector<MAF::AlternativeLocation>;
   %template(FrameArray) vector<MAF::Frame>;
   %template(TrackArray) vector<MAF::Track>;
-  %template(PluginArray) vector<MAF::IMediaPipelineFactoryPlugin*>;
 };
 
 
