@@ -37,6 +37,14 @@ docker build -t maf:builder .
 docker run --mount=type=bind,source=$(pwd)/Packages/rt.xr.maf,target=/install -it maf:builder
 ```
 
+**Note for ARM users (eg. Apple silicon) :** 
+
+The docker image uses `platform=linux/amd64` because Android NDK doesn't support ARM on Linux. 
+To work around this limitation the following solution can be used :
+- use [podman](https://podman.io/) instead of docker
+- use `podman run` [--arch](https://docs.podman.io/en/latest/markdown/podman-run.1.html#arch-arch) option : `run --arch=amd64 --mount=type=bind,source=$(pwd)/Packages/rt.xr.maf,target=/install -it maf:builder`
+
+
 ## 1. Cloning
 
 ```
