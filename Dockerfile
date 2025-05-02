@@ -54,7 +54,7 @@ RUN cp ./scripts/ffmpeg_android.meson.build ./subprojects/FFmpeg/meson.build
 RUN cp -r ${ROOT_DIR}/ffmpeg-android-maker/output/lib/arm64-v8a/* ./subprojects/FFmpeg/arm64-v8a/lib
 RUN cp -r ${ROOT_DIR}/ffmpeg-android-maker/output/include/arm64-v8a/* ./subprojects/FFmpeg/arm64-v8a/include
 
-RUN meson setup --wipe -Ddebug=true -Dlibmaf=true -Dcsharp=true -Davpipeline=true ./builddir/android-aarch64 --cross-file ./crossfile/android-aarch64-docker
+RUN meson setup --wipe -Ddebug=true ./builddir/android-aarch64 --cross-file ./crossfile/android-aarch64-docker
 RUN meson compile -C ./builddir/android-aarch64
 
 ## @TODO: SWIG bindings
