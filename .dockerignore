@@ -1,0 +1,5 @@
+.ignore/
+.venv/
+.vscode/
+subprojects/FFmpeg/
+builddir/

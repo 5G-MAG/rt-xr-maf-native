@@ -21,7 +21,6 @@ libmaf = both_libraries(
     include_directories : libmaf_includes,
     gnu_symbol_visibility : 'default',
     pic : true,
-    install : get_option('libmaf'),
     install_tag: 'libmaf'
 )
 
