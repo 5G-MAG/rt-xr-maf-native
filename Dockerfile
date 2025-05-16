@@ -30,7 +30,7 @@ RUN apt-get --allow-releaseinfo-change update && apt-get install -y --no-install
 RUN python3 -m venv /root/venv
 ENV VIRTUAL_ENV /root/venv
 ENV PATH /root/venv/bin:$PATH
-RUN python3 -m pip install meson ninja
+RUN python3 -m pip install meson==1.8.0 ninja
 
 # Install Android SDK
 RUN curl https://dl.google.com/android/repository/commandlinetools-linux-${VERSION_SDK}_latest.zip --output ${ROOT_DIR}/android-sdk.zip
