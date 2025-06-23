@@ -7,19 +7,15 @@ project(
 
 project_description = 'C++ implementation of the Media Access Functions API defined in ISO/IEC 23090-14'
 
-build_args = [
-  '-DPROJECT_NAME=' + meson.project_name(),
-  '-DPROJECT_VERSION=' + meson.project_version(),
-]
 
 libmaf_sources = files(['src/maf.cpp',  'src/factory.cpp', 'src/utils.cpp'])
 libmaf_includes = include_directories('include')
 libmaf = both_libraries(
     'maf',
     libmaf_sources,
-    c_args : build_args,
+    cpp_shared_args : [ '-DMAF_API_EXPORT' ],
     include_directories : libmaf_includes,
-    gnu_symbol_visibility : 'default',
+    gnu_symbol_visibility : 'hidden', # 'default',
     pic : true,
     install_tag: 'libmaf'
 )

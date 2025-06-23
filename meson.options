@@ -1,4 +1,4 @@
 option('install_subdir', type : 'string', value : 'android/arm64', description: 'platform/arch specific subdirectory to install the libraries in unity')
 option('libmaf', type : 'boolean', value : true, description: 'build libmaf')
 option('csharp', type : 'boolean', value : true, description: 'build csharp bindings')
-option('avpipeline', type : 'boolean', value : true, description: 'build avpipeline plugin')
+option('avpipeline', type : 'boolean', value : false, description: 'build avpipeline plugin')

@@ -1,6 +1,6 @@
 BASEDIR=$(readlink -f $(dirname $0)/..)
 DESTDIR=$(echo $1 | tr -d '\r')
-BUILDDIR="$BASEDIR/builddir/android-aarch64"
+BUILDDIR="$BASEDIR/build/android/arm64-v8a"
 
 if [ -d "$DESTDIR/bin/android/arm64" ]
 then
@@ -28,7 +28,8 @@ else
     mkdir -p $DESTDIR/dependencies/ffmpeg/7.1/android/arm64
 fi
 
-cp $BASEDIR/subprojects/FFmpeg/arm64-v8a/lib/*.so $DESTDIR/dependencies/ffmpeg/7.1/android/arm64
+cp $BASEDIR/subprojects/avpipeline/external/avcodec/android/arm64-v8a/lib/*.so $DESTDIR/dependencies/ffmpeg/7.1/android/arm64
+cp $BASEDIR/subprojects/avpipeline/external/avcodec/android/arm64-v8a/LICENSE $DESTDIR/dependencies/ffmpeg/7.1/android/arm64
 
 if [ -d "$DESTDIR/dependencies/libc++/android/arm64" ]
 then
@@ -37,4 +38,12 @@ else
     mkdir -p $DESTDIR/dependencies/libc++/android/arm64
 fi
 
-cp $ANDROID_NDK_HOME/sources/cxx-stl/llvm-libc++/libs/arm64-v8a/libc++_shared.so $DESTDIR/dependencies/libc++/android/arm64
+llvm_prebuilt="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt"
+libcpp_shared="sysroot/usr/lib/aarch64-linux-android/libc++_shared.so"
+if [ -d "$llvm_prebuilt/windows-x86_64" ]; then
+    cp "$llvm_prebuilt/windows-x86_64/$libcpp_shared" $DESTDIR/dependencies/libc++/android/arm64
+elif [ -d "$llvm_prebuilt/darmin-x86_64" ]; then
+    cp "$llvm_prebuilt/darmin-x86_64/$libcpp_shared" $DESTDIR/dependencies/libc++/android/arm64
+elif [ -d "$llvm_prebuilt/linux-x86_64" ]; then
+    cp "$llvm_prebuilt/linux-x86_64/$libcpp_shared" $DESTDIR/dependencies/libc++/android/arm64
+fi
