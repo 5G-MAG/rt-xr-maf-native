@@ -15,6 +15,7 @@ A media pipeline implements media fetching and decoding, exposing its functional
     - src
         MediaPipeline.c
     meson.build
+    README.md
 ```
 
 ## Implementing the IMediaPipeline interface

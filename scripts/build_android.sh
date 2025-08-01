@@ -20,6 +20,6 @@ rm -rf $BUILDDIR
 mkdir -p $BUILDDIR
 
 cd $BASEDIR
-meson setup --wipe -Ddebug=true $BUILDDIR --cross-file $BASEDIR/crossfile/$ARCH
+meson setup --wipe -Davpipeline -Davpipeline:avcodec_dir=avcodec/android/arm64-v8a -Ddebug=true $BUILDDIR --cross-file $BASEDIR/crossfile/$ARCH
 meson compile -C $BUILDDIR
 cd $CWD

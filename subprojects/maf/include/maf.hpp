@@ -32,7 +32,7 @@
     #pragma warning Unknown dynamic link import/export semantics.
 #endif
 
-#if MAF_API_BUILD
+#if defined(MAF_API_EXPORT)
     #define MAF_API EXPORT
 #else
     #define MAF_API IMPORT
@@ -250,11 +250,12 @@ typedef std::pair<BufferHandler*, std::vector<BufferInfo>> MafBuffer;
 extern int componentSize(ComponentType ct);
 extern int sampleSize(SampleType st);
 
-#ifdef SWIG_BINDINGS
-class BufferInfoHeader
-#else
+// #ifdef SWIG_BINDINGS
+// class BufferInfoHeader
+// #else
+// class MAF_API BufferInfoHeader
+// #endif
 class MAF_API BufferInfoHeader
-#endif
 {
     public:
         float timestampDelta = 0.0;
