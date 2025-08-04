@@ -9,3 +9,6 @@ tests/
 venv/
 vcpkg_installed/
 .DS_store
+
+Dockerfile
+.dockerignore

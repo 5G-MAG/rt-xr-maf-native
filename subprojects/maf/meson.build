@@ -15,7 +15,7 @@ libmaf = both_libraries(
     libmaf_sources,
     cpp_shared_args : [ '-DMAF_API_EXPORT' ],
     include_directories : libmaf_includes,
-    gnu_symbol_visibility : 'hidden', # 'default',
+    gnu_symbol_visibility : 'default',
     pic : true,
     install_tag: 'libmaf'
 )
