@@ -216,7 +216,51 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                                 NULL,
                                 NULL,
                                 NULL);
+
+                            const int* srcCoeffs = nullptr;
+
+                            switch (avFrame->colorspace)
+                            {
+                                case AVCOL_SPC_BT709:
+                                    srcCoeffs = sws_getCoefficients(SWS_CS_ITU709);
+                                    break;
+                                case AVCOL_SPC_BT470BG: // same as BT.601 PAL
+                                case AVCOL_SPC_SMPTE170M: // same as BT.601 NTSC
+                                    srcCoeffs = sws_getCoefficients(SWS_CS_ITU601);
+                                    break;
+                                case AVCOL_SPC_BT2020_NCL:
+                                case AVCOL_SPC_BT2020_CL:
+                                    srcCoeffs = sws_getCoefficients(SWS_CS_BT2020);
+                                    break;
+                                default:
+                                    // Fallback: guess BT.709 for HD, BT.601 for SD
+                                    srcCoeffs = (avFrame->width >= 1280 || avFrame->height > 576)
+                                        ? sws_getCoefficients(SWS_CS_ITU709)
+                                        : sws_getCoefficients(SWS_CS_ITU601);
+                                    break;
+                            }
+
+                            // -------------------------------------------------------
+                            // Range: detect from frame metadata
+                            // -------------------------------------------------------
+                            int srcRange = (avFrame->color_range == AVCOL_RANGE_JPEG) ? 1 : 0; // 0=limited, 1=full
+                            int dstRange = 1; // Always output full range to Unity
+
+                            // Neutral adjustment values
+                            int brightness = 0;
+                            int contrast   = 1 << 16; // 1.0 in 16.16 fixed-point
+                            int saturation = 1 << 16; // 1.0 in 16.16 fixed-point
+
+                            // -------------------------------------------------------
+                            // Apply colorspace + range settings
+                            // -------------------------------------------------------
+                            sws_setColorspaceDetails(
+                                swsCtx,
+                                srcCoeffs, srcRange,
+                                srcCoeffs, dstRange,
+                                brightness, contrast, saturation);
                         }
+                        
                         sws_scale(swsCtx, avFrame->data, avFrame->linesize, 0, dst->height, dst->data, dst->linesize);
                         mafFrame->timestamp = getTimestamp(avFrame->pts * av_q2d(stream_->time_base));
                         err1 = av_image_copy_to_buffer(mafFrame->data, mafFrame->length,
