@@ -699,6 +699,24 @@ class mafPINVOKE {
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_Frame_data_get")]
   public static extern global::System.IntPtr Frame_data_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_Frame_extraFrameInfoFlags_set")]
+  public static extern void Frame_extraFrameInfoFlags_set(global::System.Runtime.InteropServices.HandleRef jarg1, byte jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_Frame_extraFrameInfoFlags_get")]
+  public static extern byte Frame_extraFrameInfoFlags_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_Frame_width_set")]
+  public static extern void Frame_width_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_Frame_width_get")]
+  public static extern uint Frame_width_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_Frame_height_set")]
+  public static extern void Frame_height_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_Frame_height_get")]
+  public static extern uint Frame_height_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_new_Frame__SWIG_0")]
   public static extern global::System.IntPtr new_Frame__SWIG_0(byte jarg1, ulong jarg2, uint jarg3, global::System.IntPtr jarg4);
 
@@ -819,6 +837,48 @@ class mafPINVOKE {
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_attributeType_get")]
   public static extern int BufferInfo_attributeType_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_timedHeader_set")]
+  public static extern void BufferInfo_timedHeader_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_timedHeader_get")]
+  public static extern bool BufferInfo_timedHeader_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_immutable_set")]
+  public static extern void BufferInfo_immutable_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_immutable_get")]
+  public static extern bool BufferInfo_immutable_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_normalized_set")]
+  public static extern void BufferInfo_normalized_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_normalized_get")]
+  public static extern bool BufferInfo_normalized_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_maxWidth_set")]
+  public static extern void BufferInfo_maxWidth_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_maxWidth_get")]
+  public static extern uint BufferInfo_maxWidth_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_maxHeight_set")]
+  public static extern void BufferInfo_maxHeight_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_maxHeight_get")]
+  public static extern uint BufferInfo_maxHeight_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_targetSampleRate_set")]
+  public static extern void BufferInfo_targetSampleRate_set(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_targetSampleRate_get")]
+  public static extern int BufferInfo_targetSampleRate_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_playbackSpeed_set")]
+  public static extern void BufferInfo_playbackSpeed_set(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_playbackSpeed_get")]
+  public static extern float BufferInfo_playbackSpeed_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_new_BufferInfo")]
   public static extern global::System.IntPtr new_BufferInfo();
 
@@ -914,6 +974,12 @@ class mafPINVOKE {
 
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_TimeInfo_loop_get")]
   public static extern bool TimeInfo_loop_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_TimeInfo_endTimeOffset_set")]
+  public static extern void TimeInfo_endTimeOffset_set(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_TimeInfo_endTimeOffset_get")]
+  public static extern double TimeInfo_endTimeOffset_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_new_TimeInfo")]
   public static extern global::System.IntPtr new_TimeInfo();

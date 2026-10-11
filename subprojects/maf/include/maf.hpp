@@ -92,6 +92,11 @@ public:
     uint64_t timestamp;
     uint32_t length;
     uint8_t * data;
+    // Table 25: bit 0 of extraFrameInfoFlags (the dimensions flag) is set when the frame holds
+    // texture data; width and height are then the size of the picture stored in the frame.
+    uint8_t extraFrameInfoFlags = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
     Frame(uint8_t i = 0, uint64_t t = 0, uint32_t byteLength = 0, uint8_t* buffer = nullptr);
     ~Frame() = default;
 };
@@ -166,7 +171,22 @@ enum AttributeType {
     // FIXME: workaround the current limitation of the API to signal the expected color format
     // when this is passed through, the other members
     TEXTURE_RGB,
-    TEXTURE_GBR_3PLANE_420_UNORM
+    TEXTURE_GBR_3PLANE_420_UNORM,
+    // MPEG_texture_video formats other than RGB, each one a single OpenGL pixel format
+    TEXTURE_RED,
+    TEXTURE_GREEN,
+    TEXTURE_BLUE,
+    TEXTURE_RG,
+    TEXTURE_RGBA,
+    TEXTURE_BGR,
+    TEXTURE_BGRA,
+    TEXTURE_DEPTH_COMPONENT,
+    // Timed metadata (ISO/IEC 23090-14:2024, clause 7). METADATA_ACCESSOR: the buffer holds the samples of a metadata track as timed
+    // accessor data (Table 8 header when BufferInfo.timedHeader is set, then the sample bytes).
+    // METADATA_SCENE_UPDATE: the buffer is not described by an accessor (MPEG_scene_dynamic, 5.2.1.3); each frame holds
+    // one byte of flags (bit 0: sync sample), one byte update_mode (0xFF: not available), then the sample bytes.
+    METADATA_ACCESSOR,
+    METADATA_SCENE_UPDATE
 };
 
 
@@ -190,6 +210,18 @@ struct BufferInfo
     int offset;
     int stride;
     AttributeType attributeType;
+    // timedHeader: the pipeline writes a timed accessor information header (Table 8) before the data of
+    // every frame. immutable and normalized describe that header.
+    bool timedHeader = false;
+    bool immutable = true;
+    bool normalized = false;
+    // texture buffers: maximum picture size (MPEG_texture_video width and height), 0 when not given.
+    uint32_t maxWidth = 0;
+    uint32_t maxHeight = 0;
+    // audio buffers: sample rate requested by the scene, 0 keeps the decoded sample rate.
+    int targetSampleRate = 0;
+    // audio buffers: playback speed of the audio signal (MPEG_audio_spatial playbackSpeed, 0.5 to 2.0), 1.0 is normal speed.
+    float playbackSpeed = 1.0f;
 };
 
 
@@ -223,6 +255,8 @@ struct TimeInfo
     double timeOffset;
     bool autoplay;
     bool loop;
+    // end of the generated media, in seconds from the start of the source; negative means the end of the source
+    double endTimeOffset = -1;
 };
 
 enum PipelineState {
