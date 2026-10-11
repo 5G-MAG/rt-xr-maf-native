@@ -3156,6 +3156,72 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_maf_Frame_data_get(void * jarg1) {
 }
 
 
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_Frame_extraFrameInfoFlags_set(void * jarg1, unsigned char jarg2) {
+  MAF::Frame *arg1 = (MAF::Frame *) 0 ;
+  uint8_t arg2 ;
+  
+  arg1 = (MAF::Frame *)jarg1; 
+  arg2 = (uint8_t)jarg2; 
+  if (arg1) (arg1)->extraFrameInfoFlags = arg2;
+}
+
+
+SWIGEXPORT unsigned char SWIGSTDCALL CSharp_maf_Frame_extraFrameInfoFlags_get(void * jarg1) {
+  unsigned char jresult ;
+  MAF::Frame *arg1 = (MAF::Frame *) 0 ;
+  uint8_t result;
+  
+  arg1 = (MAF::Frame *)jarg1; 
+  result = (uint8_t) ((arg1)->extraFrameInfoFlags);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_Frame_width_set(void * jarg1, unsigned int jarg2) {
+  MAF::Frame *arg1 = (MAF::Frame *) 0 ;
+  uint32_t arg2 ;
+  
+  arg1 = (MAF::Frame *)jarg1; 
+  arg2 = (uint32_t)jarg2; 
+  if (arg1) (arg1)->width = arg2;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_Frame_width_get(void * jarg1) {
+  unsigned int jresult ;
+  MAF::Frame *arg1 = (MAF::Frame *) 0 ;
+  uint32_t result;
+  
+  arg1 = (MAF::Frame *)jarg1; 
+  result = (uint32_t) ((arg1)->width);
+  jresult = (unsigned int)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_Frame_height_set(void * jarg1, unsigned int jarg2) {
+  MAF::Frame *arg1 = (MAF::Frame *) 0 ;
+  uint32_t arg2 ;
+  
+  arg1 = (MAF::Frame *)jarg1; 
+  arg2 = (uint32_t)jarg2; 
+  if (arg1) (arg1)->height = arg2;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_Frame_height_get(void * jarg1) {
+  unsigned int jresult ;
+  MAF::Frame *arg1 = (MAF::Frame *) 0 ;
+  uint32_t result;
+  
+  arg1 = (MAF::Frame *)jarg1; 
+  result = (uint32_t) ((arg1)->height);
+  jresult = (unsigned int)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void * SWIGSTDCALL CSharp_maf_new_Frame__SWIG_0(unsigned char jarg1, unsigned long long jarg2, unsigned int jarg3, void * jarg4) {
   void * jresult ;
   uint8_t arg1 ;
@@ -3608,6 +3674,160 @@ SWIGEXPORT int SWIGSTDCALL CSharp_maf_BufferInfo_attributeType_get(void * jarg1)
 }
 
 
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferInfo_timedHeader_set(void * jarg1, unsigned int jarg2) {
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  bool arg2 ;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  arg2 = jarg2 ? true : false; 
+  if (arg1) (arg1)->timedHeader = arg2;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_BufferInfo_timedHeader_get(void * jarg1) {
+  unsigned int jresult ;
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  bool result;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  result = (bool) ((arg1)->timedHeader);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferInfo_immutable_set(void * jarg1, unsigned int jarg2) {
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  bool arg2 ;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  arg2 = jarg2 ? true : false; 
+  if (arg1) (arg1)->immutable = arg2;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_BufferInfo_immutable_get(void * jarg1) {
+  unsigned int jresult ;
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  bool result;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  result = (bool) ((arg1)->immutable);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferInfo_normalized_set(void * jarg1, unsigned int jarg2) {
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  bool arg2 ;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  arg2 = jarg2 ? true : false; 
+  if (arg1) (arg1)->normalized = arg2;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_BufferInfo_normalized_get(void * jarg1) {
+  unsigned int jresult ;
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  bool result;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  result = (bool) ((arg1)->normalized);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferInfo_maxWidth_set(void * jarg1, unsigned int jarg2) {
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  uint32_t arg2 ;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  arg2 = (uint32_t)jarg2; 
+  if (arg1) (arg1)->maxWidth = arg2;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_BufferInfo_maxWidth_get(void * jarg1) {
+  unsigned int jresult ;
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  uint32_t result;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  result = (uint32_t) ((arg1)->maxWidth);
+  jresult = (unsigned int)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferInfo_maxHeight_set(void * jarg1, unsigned int jarg2) {
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  uint32_t arg2 ;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  arg2 = (uint32_t)jarg2; 
+  if (arg1) (arg1)->maxHeight = arg2;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_BufferInfo_maxHeight_get(void * jarg1) {
+  unsigned int jresult ;
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  uint32_t result;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  result = (uint32_t) ((arg1)->maxHeight);
+  jresult = (unsigned int)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferInfo_targetSampleRate_set(void * jarg1, int jarg2) {
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  int arg2 ;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  arg2 = (int)jarg2; 
+  if (arg1) (arg1)->targetSampleRate = arg2;
+}
+
+
+SWIGEXPORT int SWIGSTDCALL CSharp_maf_BufferInfo_targetSampleRate_get(void * jarg1) {
+  int jresult ;
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  int result;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  result = (int) ((arg1)->targetSampleRate);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferInfo_playbackSpeed_set(void * jarg1, float jarg2) {
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  float arg2 ;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  arg2 = (float)jarg2; 
+  if (arg1) (arg1)->playbackSpeed = arg2;
+}
+
+
+SWIGEXPORT float SWIGSTDCALL CSharp_maf_BufferInfo_playbackSpeed_get(void * jarg1) {
+  float jresult ;
+  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
+  float result;
+  
+  arg1 = (MAF::BufferInfo *)jarg1; 
+  result = (float) ((arg1)->playbackSpeed);
+  jresult = result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void * SWIGSTDCALL CSharp_maf_new_BufferInfo() {
   void * jresult ;
   MAF::BufferInfo *result = 0 ;
@@ -3959,6 +4179,28 @@ SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_TimeInfo_loop_get(void * jarg1) {
   
   arg1 = (MAF::TimeInfo *)jarg1; 
   result = (bool) ((arg1)->loop);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_TimeInfo_endTimeOffset_set(void * jarg1, double jarg2) {
+  MAF::TimeInfo *arg1 = (MAF::TimeInfo *) 0 ;
+  double arg2 ;
+  
+  arg1 = (MAF::TimeInfo *)jarg1; 
+  arg2 = (double)jarg2; 
+  if (arg1) (arg1)->endTimeOffset = arg2;
+}
+
+
+SWIGEXPORT double SWIGSTDCALL CSharp_maf_TimeInfo_endTimeOffset_get(void * jarg1) {
+  double jresult ;
+  MAF::TimeInfo *arg1 = (MAF::TimeInfo *) 0 ;
+  double result;
+  
+  arg1 = (MAF::TimeInfo *)jarg1; 
+  result = (double) ((arg1)->endTimeOffset);
   jresult = result; 
   return jresult;
 }
