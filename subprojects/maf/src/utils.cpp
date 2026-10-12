@@ -11,6 +11,8 @@
  */
 
 
+#include <cstring>
+#include <cstdlib>
 #include <maf.hpp>
 
 using namespace MAF;
@@ -27,13 +29,21 @@ inline int getItemSize(SampleType type, ComponentType componentType){
 /* public functions ************************************************************************/ 
 
 int BufferInfoHeader::GetHeaderSize(){
+    // Table 8: timestamp_delta (4), byteOffset (4), count (4), bufferViewByteOffset, Length and Stride (12),
+    // then max and min; a mutable header adds componentType (4), type (1) and normalized with its reserved bits (1)
     int sz = 24;
     if (!this->immutable){
-        sz += 12;
+        sz += 6;
     }
     sz += (2 * componentSize(this->componentType) * sampleSize(this->type));
     return sz;
 }
+
+// 5.1.2: "uint(n) ... interpreted as a binary representation of an unsigned integer with the most significant bit written first",
+// float(n) as IEEE 754: the first byte of a multi-byte field is the most significant one (big-endian). The first bit of the byte that
+// follows the type field is the normalized bit (Table 8: normalized u(1), reserved_zero_bit u(7)).
+static void putBE32(uint8_t* d, uint32_t v){ d[0] = v >> 24; d[1] = v >> 16; d[2] = v >> 8; d[3] = v; }
+static uint32_t getBE32(const uint8_t* d){ return ((uint32_t)d[0] << 24) | ((uint32_t)d[1] << 16) | ((uint32_t)d[2] << 8) | d[3]; }
 
 void BufferInfoHeader::WriteAccessorHeader(uint8_t* data){
     /*
@@ -43,51 +53,49 @@ void BufferInfoHeader::WriteAccessorHeader(uint8_t* data){
     */
     size_t  p = 0;
     // float
-    memcpy(data+p, &this->timestampDelta, 4);
+    uint32_t tsBits; memcpy(&tsBits, &this->timestampDelta, 4);
+    putBE32(data+p, tsBits);
     p += 4;
     if (!this->immutable){
         auto ct = static_cast<uint32_t>(this->componentType);
-        memcpy(data+p, &ct, 4);
+        putBE32(data+p, ct);
         p += 4;
         uint8_t st = static_cast<uint8_t>(this->type);
         memcpy(data+p, &st, 1);
         p++;
-        // 1 bit + 7 reserved
-        memcpy(data+p, &this->normalized, 1);
+        // 1 bit + 7 reserved bits equal to 0
+        uint8_t norm = this->normalized ? 0x80 : 0;
+        memcpy(data+p, &norm, 1);
         p++;
     }
     // uint32_t
-    memcpy(data+p, &this->byteOffset, 4);
+    putBE32(data+p, this->byteOffset);
     p += 4;
     // uint32_t
-    memcpy(data+p, &this->count, 4);
+    putBE32(data+p, this->count);
     p += 4;
     // max/min
     int itemSize = componentSize(this->componentType) * sampleSize(this->type);
     if (this->max != nullptr){
         memcpy(data+p, this->max, itemSize);
     } else {
-        for(int i = 0; i <= itemSize; i++){
-            data[p] = 0;   
-        }
+        memset(data+p, 0, itemSize);
     }
     p+= itemSize;
     if (this->min != nullptr){
         memcpy(data+p, this->min, itemSize);
     } else {
-        for(int i = 0; i <= itemSize; i++){
-            data[p] = 0;   
-        }
+        memset(data+p, 0, itemSize);
     }
     p+= itemSize;
     // uint32_t
-    memcpy(data+p, &this->bufferViewByteOffset, 4);
+    putBE32(data+p, this->bufferViewByteOffset);
     p += 4;
     // uint32_t
-    memcpy(data+p, &this->bufferViewByteLength, 4);
+    putBE32(data+p, this->bufferViewByteLength);
     p += 4;
     // uint32_t
-    memcpy(data+p, &this->bufferViewByteStride, 4);
+    putBE32(data+p, this->bufferViewByteStride);
     p += 4;
 }
 
@@ -95,22 +103,28 @@ void BufferInfoHeader::ReadAccessorHeader(uint8_t* data){
 
     size_t p = 0;
     // float
-    memcpy(data, &this->timestampDelta, 4);
+    uint32_t tsBits = getBE32(data);
+    memcpy(&this->timestampDelta, &tsBits, 4);
     p += 4;
     if (!this->immutable){
-        memcpy(&this->componentType, data+p, 4);
+        uint32_t ct = getBE32(data+p);
+        this->componentType = static_cast<ComponentType>(ct);
         p += 4;
-        memcpy(&this->componentType, data+p, 1);
+        uint8_t st = 0;
+        memcpy(&st, data+p, 1);
+        this->type = static_cast<SampleType>(st);
         p++;
         // 1 bit + 7 reserved
-        memcpy(&this->normalized, data+p, 1);
+        uint8_t norm = 0;
+        memcpy(&norm, data+p, 1);
+        this->normalized = (norm & 0x80) != 0;
         p++;
     }
     // uint32_t
-    memcpy(&this->byteOffset, data+p, 4);
+    this->byteOffset = getBE32(data+p);
     p += 4;
     // uint32_t
-    memcpy(&this->count, data+p, 4);
+    this->count = getBE32(data+p);
     p += 4;
     // max/min - points to frame data
     int itemSize = getItemSize(this);
@@ -119,13 +133,13 @@ void BufferInfoHeader::ReadAccessorHeader(uint8_t* data){
     this->min = data+p;
     p += itemSize;
     // uint32_t
-    memcpy(&this->bufferViewByteOffset, data+p, 4);
-    p += 4;
-    // uint32_t 
-    memcpy(&this->bufferViewByteLength, data+p, 4);
+    this->bufferViewByteOffset = getBE32(data+p);
     p += 4;
     // uint32_t
-    memcpy(&this->bufferViewByteStride, data+p, 4);
+    this->bufferViewByteLength = getBE32(data+p);
+    p += 4;
+    // uint32_t
+    this->bufferViewByteStride = getBE32(data+p);
     p += 4;
 }
 
@@ -141,8 +155,8 @@ std::vector<BufferInfoHeader>* BufferInfoHeader::CreateAccessorsHeaders(std::vec
         h.componentType = (*bufferInfo)[i].componentType;
         h.immutable = immutable;
         auto sz = getItemSize(&h);
-        h.max = malloc(sz);
-        h.min = malloc(sz);
+        h.max = calloc(1, sz);
+        h.min = calloc(1, sz);
         i++;
     }
     return headers;
