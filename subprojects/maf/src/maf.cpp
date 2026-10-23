@@ -166,6 +166,9 @@ void BufferHandler::writeFrame(Frame *frame){
         frames_[writeIdx_].timestamp = frame->timestamp;
         frames_[writeIdx_].length = frame->length;
         frames_[writeIdx_].data = frame->data;
+        frames_[writeIdx_].extraFrameInfoFlags = frame->extraFrameInfoFlags;
+        frames_[writeIdx_].width = frame->width;
+        frames_[writeIdx_].height = frame->height;
     };
 
     if(capacity_ == 1){
@@ -208,6 +211,9 @@ void BufferHandler::writeFrame2(Frame *frame){
         frames_[writeIdx_].timestamp = frame->timestamp;
         frames_[writeIdx_].length = frame->length;
         frames_[writeIdx_].data = frame->data;
+        frames_[writeIdx_].extraFrameInfoFlags = frame->extraFrameInfoFlags;
+        frames_[writeIdx_].width = frame->width;
+        frames_[writeIdx_].height = frame->height;
     };
     writeIdx_ = (writeIdx_+1) % capacity_;
     if(count_ < capacity_)

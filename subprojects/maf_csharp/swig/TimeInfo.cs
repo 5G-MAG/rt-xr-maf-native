@@ -97,6 +97,16 @@ public class TimeInfo : global::System.IDisposable {
     } 
   }
 
+  public double endTimeOffset {
+    set {
+      mafPINVOKE.TimeInfo_endTimeOffset_set(swigCPtr, value);
+    } 
+    get {
+      double ret = mafPINVOKE.TimeInfo_endTimeOffset_get(swigCPtr);
+      return ret;
+    } 
+  }
+
   public TimeInfo() : this(mafPINVOKE.new_TimeInfo(), true) {
   }
 

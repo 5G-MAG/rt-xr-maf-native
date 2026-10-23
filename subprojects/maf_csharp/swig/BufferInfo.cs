@@ -128,6 +128,76 @@ public class BufferInfo : global::System.IDisposable {
     } 
   }
 
+  public bool timedHeader {
+    set {
+      mafPINVOKE.BufferInfo_timedHeader_set(swigCPtr, value);
+    } 
+    get {
+      bool ret = mafPINVOKE.BufferInfo_timedHeader_get(swigCPtr);
+      return ret;
+    } 
+  }
+
+  public bool immutable {
+    set {
+      mafPINVOKE.BufferInfo_immutable_set(swigCPtr, value);
+    } 
+    get {
+      bool ret = mafPINVOKE.BufferInfo_immutable_get(swigCPtr);
+      return ret;
+    } 
+  }
+
+  public bool normalized {
+    set {
+      mafPINVOKE.BufferInfo_normalized_set(swigCPtr, value);
+    } 
+    get {
+      bool ret = mafPINVOKE.BufferInfo_normalized_get(swigCPtr);
+      return ret;
+    } 
+  }
+
+  public uint maxWidth {
+    set {
+      mafPINVOKE.BufferInfo_maxWidth_set(swigCPtr, value);
+    } 
+    get {
+      uint ret = mafPINVOKE.BufferInfo_maxWidth_get(swigCPtr);
+      return ret;
+    } 
+  }
+
+  public uint maxHeight {
+    set {
+      mafPINVOKE.BufferInfo_maxHeight_set(swigCPtr, value);
+    } 
+    get {
+      uint ret = mafPINVOKE.BufferInfo_maxHeight_get(swigCPtr);
+      return ret;
+    } 
+  }
+
+  public int targetSampleRate {
+    set {
+      mafPINVOKE.BufferInfo_targetSampleRate_set(swigCPtr, value);
+    } 
+    get {
+      int ret = mafPINVOKE.BufferInfo_targetSampleRate_get(swigCPtr);
+      return ret;
+    } 
+  }
+
+  public float playbackSpeed {
+    set {
+      mafPINVOKE.BufferInfo_playbackSpeed_set(swigCPtr, value);
+    } 
+    get {
+      float ret = mafPINVOKE.BufferInfo_playbackSpeed_get(swigCPtr);
+      return ret;
+    } 
+  }
+
   public BufferInfo() : this(mafPINVOKE.new_BufferInfo(), true) {
   }
 
