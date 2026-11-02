@@ -158,32 +158,13 @@ public class BufferInfo : global::System.IDisposable {
     } 
   }
 
-  public uint maxWidth {
+  public OutputMedia outputMedia {
     set {
-      mafPINVOKE.BufferInfo_maxWidth_set(swigCPtr, value);
+      mafPINVOKE.BufferInfo_outputMedia_set(swigCPtr, OutputMedia.getCPtr(value));
     } 
     get {
-      uint ret = mafPINVOKE.BufferInfo_maxWidth_get(swigCPtr);
-      return ret;
-    } 
-  }
-
-  public uint maxHeight {
-    set {
-      mafPINVOKE.BufferInfo_maxHeight_set(swigCPtr, value);
-    } 
-    get {
-      uint ret = mafPINVOKE.BufferInfo_maxHeight_get(swigCPtr);
-      return ret;
-    } 
-  }
-
-  public int targetSampleRate {
-    set {
-      mafPINVOKE.BufferInfo_targetSampleRate_set(swigCPtr, value);
-    } 
-    get {
-      int ret = mafPINVOKE.BufferInfo_targetSampleRate_get(swigCPtr);
+      global::System.IntPtr cPtr = mafPINVOKE.BufferInfo_outputMedia_get(swigCPtr);
+      OutputMedia ret = (cPtr == global::System.IntPtr.Zero) ? null : new OutputMedia(cPtr, false);
       return ret;
     } 
   }

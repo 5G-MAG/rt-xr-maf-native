@@ -61,7 +61,7 @@ extern "C"
 #include <MetadataDecoder.hpp>
 
 // Reformat the decoded audio to the buffer layout: sample format, channel layout (planar/interleaved) and,
-// when BufferInfo.targetSampleRate is set, the sample rate.
+// when BufferInfo.outputMedia.sampleRate is set, the sample rate.
 #define ENABLE_AUDIO_RESAMPLING 1
 
 using ms = std::chrono::duration<double, std::milli>;
@@ -443,7 +443,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                         const int srcH = avFrame->height;
                         int outW = srcW;
                         int outH = srcH;
-                        fitPictureSize(srcW, srcH, info.maxWidth, info.maxHeight, dataCapacity, outFmt.bytesPerPixel, outW, outH);
+                        fitPictureSize(srcW, srcH, info.outputMedia.width, info.outputMedia.height, dataCapacity, outFmt.bytesPerPixel, outW, outH);
 
                         int flags = (outW != srcW || outH != srcH) ? SWS_BILINEAR : (SWS_FAST_BILINEAR | SWS_FULL_CHR_H_INT | SWS_ACCURATE_RND);
                         swsCtx = sws_getCachedContext(swsCtx, srcW, srcH, (enum AVPixelFormat)avFrame->format,
@@ -772,15 +772,15 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
     bool planarAudioFormat = outputNumChannels > 1 ? bufferInfo.at(0).stride > 0 : true;
     AVSampleFormat outputSampleFmt = GetAVSampleFormat(bufferInfo.at(0).componentType, planarAudioFormat);
     const int inputSampleRate = codecCtx_->sample_rate;
-    const int outputSampleRate = bufferInfo.at(0).targetSampleRate > 0 ? bufferInfo.at(0).targetSampleRate : inputSampleRate;
+    const int outputSampleRate = bufferInfo.at(0).outputMedia.sampleRate > 0 ? (int)bufferInfo.at(0).outputMedia.sampleRate : inputSampleRate;
     // The timed accessor information header is written when the scene signals it (a bufferView on the timed accessor).
     const bool useAccessorHeaders = bufferInfo.at(0).timedHeader;
     // one buffer carries one signal: all its accessors share the sample rate and the playback speed
     for (const auto &bi : bufferInfo)
     {
-        if (bi.targetSampleRate != bufferInfo.at(0).targetSampleRate || bi.playbackSpeed != bufferInfo.at(0).playbackSpeed)
+        if (bi.outputMedia.sampleRate != bufferInfo.at(0).outputMedia.sampleRate || bi.playbackSpeed != bufferInfo.at(0).playbackSpeed)
         {
-            throw "audio accessors of one buffer have different targetSampleRate or playbackSpeed";
+            throw "audio accessors of one buffer have different sample rate or playbackSpeed";
         }
     }
     // playbackSpeed (MPEG_audio_spatial, 0.5 to 2.0): the resampler reads the samples at speed times the decoded

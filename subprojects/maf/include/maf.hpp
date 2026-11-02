@@ -201,6 +201,30 @@ enum ComponentType
     FLOAT			= 5126
 };
 
+// ISO/IEC 23090-14, clause 6.2: the format of the pixel data of a texture
+enum ColorFormat {
+    RED,
+    GREEN,
+    BLUE,
+    RG,
+    RGB,
+    RGBA,
+    BGR,
+    BGRA,
+    DEPTH_COMPONENT
+};
+
+// ISO/IEC 23090-14, clause 6.2: the format of the media the pipeline outputs. width and height are those of a texture
+// (the maximum picture size of MPEG_texture_video), format its pixel format, sampleRate the sample rate of audio.
+// A width, height or sampleRate of 0 is not set: the decoded value is kept.
+struct OutputMedia
+{
+    uint32_t width = 0;
+    uint32_t height = 0;
+    ColorFormat format = ColorFormat::RGB;
+    uint32_t sampleRate = 0;
+};
+
 struct BufferInfo
 {
     int bufferId;
@@ -215,11 +239,7 @@ struct BufferInfo
     bool timedHeader = false;
     bool immutable = true;
     bool normalized = false;
-    // texture buffers: maximum picture size (MPEG_texture_video width and height), 0 when not given.
-    uint32_t maxWidth = 0;
-    uint32_t maxHeight = 0;
-    // audio buffers: sample rate requested by the scene, 0 keeps the decoded sample rate.
-    int targetSampleRate = 0;
+    OutputMedia outputMedia;
     // audio buffers: playback speed of the audio signal (MPEG_audio_spatial playbackSpeed, 0.5 to 2.0), 1.0 is normal speed.
     float playbackSpeed = 1.0f;
 };

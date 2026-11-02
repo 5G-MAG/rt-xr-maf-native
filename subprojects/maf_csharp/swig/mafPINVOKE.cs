@@ -795,6 +795,36 @@ class mafPINVOKE {
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferHandler_setOnFrameReadCallback")]
   public static extern void BufferHandler_setOnFrameReadCallback(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_OutputMedia_width_set")]
+  public static extern void OutputMedia_width_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_OutputMedia_width_get")]
+  public static extern uint OutputMedia_width_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_OutputMedia_height_set")]
+  public static extern void OutputMedia_height_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_OutputMedia_height_get")]
+  public static extern uint OutputMedia_height_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_OutputMedia_format_set")]
+  public static extern void OutputMedia_format_set(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_OutputMedia_format_get")]
+  public static extern int OutputMedia_format_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_OutputMedia_sampleRate_set")]
+  public static extern void OutputMedia_sampleRate_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_OutputMedia_sampleRate_get")]
+  public static extern uint OutputMedia_sampleRate_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_new_OutputMedia")]
+  public static extern global::System.IntPtr new_OutputMedia();
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_delete_OutputMedia")]
+  public static extern void delete_OutputMedia(global::System.Runtime.InteropServices.HandleRef jarg1);
+
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_bufferId_set")]
   public static extern void BufferInfo_bufferId_set(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
@@ -855,23 +885,11 @@ class mafPINVOKE {
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_normalized_get")]
   public static extern bool BufferInfo_normalized_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_maxWidth_set")]
-  public static extern void BufferInfo_maxWidth_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_outputMedia_set")]
+  public static extern void BufferInfo_outputMedia_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_maxWidth_get")]
-  public static extern uint BufferInfo_maxWidth_get(global::System.Runtime.InteropServices.HandleRef jarg1);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_maxHeight_set")]
-  public static extern void BufferInfo_maxHeight_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_maxHeight_get")]
-  public static extern uint BufferInfo_maxHeight_get(global::System.Runtime.InteropServices.HandleRef jarg1);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_targetSampleRate_set")]
-  public static extern void BufferInfo_targetSampleRate_set(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_targetSampleRate_get")]
-  public static extern int BufferInfo_targetSampleRate_get(global::System.Runtime.InteropServices.HandleRef jarg1);
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_outputMedia_get")]
+  public static extern global::System.IntPtr BufferInfo_outputMedia_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_playbackSpeed_set")]
   public static extern void BufferInfo_playbackSpeed_set(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
@@ -1146,11 +1164,11 @@ class mafPINVOKE {
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_MediaPipelineFactory_registry_get")]
   public static extern global::System.IntPtr MediaPipelineFactory_registry_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_MediaPipelineFactory_registerPlugin")]
-  public static extern void MediaPipelineFactory_registerPlugin(global::System.Runtime.InteropServices.HandleRef jarg1, string jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
-
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_MediaPipelineFactory_createMediaPipeline")]
   public static extern global::System.IntPtr MediaPipelineFactory_createMediaPipeline(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
+
+  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_MediaPipelineFactory_registerPlugin")]
+  public static extern void MediaPipelineFactory_registerPlugin(global::System.Runtime.InteropServices.HandleRef jarg1, string jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 }
 
 }
