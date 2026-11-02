@@ -261,8 +261,6 @@ struct TimeInfo
     double timeOffset;
     bool autoplay;
     bool loop;
-    // end of the generated media, in seconds from the start of the source; negative means the end of the source
-    double endTimeOffset = -1;
 };
 
 enum PipelineState {

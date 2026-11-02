@@ -987,12 +987,6 @@ class mafPINVOKE {
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_TimeInfo_loop_get")]
   public static extern bool TimeInfo_loop_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_TimeInfo_endTimeOffset_set")]
-  public static extern void TimeInfo_endTimeOffset_set(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_TimeInfo_endTimeOffset_get")]
-  public static extern double TimeInfo_endTimeOffset_get(global::System.Runtime.InteropServices.HandleRef jarg1);
-
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_new_TimeInfo")]
   public static extern global::System.IntPtr new_TimeInfo();
 

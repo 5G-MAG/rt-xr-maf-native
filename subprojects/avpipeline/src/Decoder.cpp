@@ -1021,7 +1021,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
                     else
                     {
                         srcSamplesRead = 0;
-                        // 4.3: the media is consumed from startTimeOffset to endTimeOffset: a decoded frame that straddles
+                        // 4.3: the media is consumed from startTimeOffset to the end of the range: a decoded frame that straddles
                         // either limit is cut at the sample, not at the codec frame
                         if (trimStart_ && avFrameSourceTime < rangeStart_)
                         {

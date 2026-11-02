@@ -4224,28 +4224,6 @@ SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_TimeInfo_loop_get(void * jarg1) {
 }
 
 
-SWIGEXPORT void SWIGSTDCALL CSharp_maf_TimeInfo_endTimeOffset_set(void * jarg1, double jarg2) {
-  MAF::TimeInfo *arg1 = (MAF::TimeInfo *) 0 ;
-  double arg2 ;
-  
-  arg1 = (MAF::TimeInfo *)jarg1; 
-  arg2 = (double)jarg2; 
-  if (arg1) (arg1)->endTimeOffset = arg2;
-}
-
-
-SWIGEXPORT double SWIGSTDCALL CSharp_maf_TimeInfo_endTimeOffset_get(void * jarg1) {
-  double jresult ;
-  MAF::TimeInfo *arg1 = (MAF::TimeInfo *) 0 ;
-  double result;
-  
-  arg1 = (MAF::TimeInfo *)jarg1; 
-  result = (double) ((arg1)->endTimeOffset);
-  jresult = result; 
-  return jresult;
-}
-
-
 SWIGEXPORT void * SWIGSTDCALL CSharp_maf_new_TimeInfo() {
   void * jresult ;
   MAF::TimeInfo *result = 0 ;

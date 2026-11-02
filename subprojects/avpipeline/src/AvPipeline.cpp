@@ -286,14 +286,8 @@ void AvMediaPipeline::fetch(){
         const double origin = (avFmtCtx_->start_time != AV_NOPTS_VALUE) ? (avFmtCtx_->start_time / (double)AV_TIME_BASE) : 0.0;
         const double startOffset = timeInfo_.timeOffset > 0.0 ? timeInfo_.timeOffset : 0.0;
         const double startAbs = origin + startOffset;
-        double endAbs = -1.0;
-        if (timeInfo_.endTimeOffset >= 0.0) {
-            if (timeInfo_.endTimeOffset > startOffset) {
-                endAbs = origin + timeInfo_.endTimeOffset;
-            } else {
-                std::cout << "endTimeOffset (" << timeInfo_.endTimeOffset << " s) is not after startTimeOffset (" << startOffset << " s): ignored" << std::endl;
-            }
-        }
+        // TimeInfo has no end offset (clause 6.2): the media is generated up to the end of the source
+        const double endAbs = -1.0;
 
         for (auto & [streamIdx, dec]: decoders_){
             dec->SetRange(startAbs, endAbs, startOffset > 0.0);
@@ -311,7 +305,7 @@ void AvMediaPipeline::fetch(){
 
         // limit of packets waiting in a decoder before a looping source is read again
         const size_t loopQueueLimit = 1000;
-        std::map<int, bool> ended;       // streams that reached endTimeOffset in the current pass
+        std::map<int, bool> ended;       // streams that reached the end of the range in the current pass
         std::map<int, double> passEnd;   // end time of the last packet queued for a stream in the current pass
         double base = 0.0;
         bool finished = false;
@@ -358,7 +352,7 @@ void AvMediaPipeline::fetch(){
                 double tb = av_q2d(st->time_base);
                 int64_t ts = avPkt->dts != AV_NOPTS_VALUE ? avPkt->dts : avPkt->pts;
                 if (endAbs >= 0.0 && ts != AV_NOPTS_VALUE && ts * tb >= endAbs) {
-                    // nothing of this stream before endTimeOffset follows
+                    // nothing of this stream before the end of the range follows
                     ended[avPkt->stream_index] = true;
                     av_packet_unref(avPkt);
                     passOver = (ended.size() == decoders_.size());
