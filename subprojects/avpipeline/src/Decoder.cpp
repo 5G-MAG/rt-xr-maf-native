@@ -775,22 +775,14 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
     const int outputSampleRate = bufferInfo.at(0).outputMedia.sampleRate > 0 ? (int)bufferInfo.at(0).outputMedia.sampleRate : inputSampleRate;
     // The timed accessor information header is written when the scene signals it (a bufferView on the timed accessor).
     const bool useAccessorHeaders = bufferInfo.at(0).timedHeader;
-    // one buffer carries one signal: all its accessors share the sample rate and the playback speed
+    // one buffer carries one signal: all its accessors share the sample rate
     for (const auto &bi : bufferInfo)
     {
-        if (bi.outputMedia.sampleRate != bufferInfo.at(0).outputMedia.sampleRate || bi.playbackSpeed != bufferInfo.at(0).playbackSpeed)
+        if (bi.outputMedia.sampleRate != bufferInfo.at(0).outputMedia.sampleRate)
         {
-            throw "audio accessors of one buffer have different sample rate or playbackSpeed";
+            throw "audio accessors of one buffer have different sample rates";
         }
     }
-    // playbackSpeed (MPEG_audio_spatial, 0.5 to 2.0): the resampler reads the samples at speed times the decoded
-    // rate and writes them at the output rate, so the signal plays faster or slower and its pitch follows.
-    const float playbackSpeed = bufferInfo.at(0).playbackSpeed;
-    if (!(playbackSpeed >= 0.5f && playbackSpeed <= 2.0f))
-    {
-        throw "playbackSpeed is outside 0.5 to 2.0";
-    }
-    const int resamplerInputRate = playbackSpeed == 1.0f ? inputSampleRate : (int)std::lround(inputSampleRate * (double)playbackSpeed);
     const double timeBase = av_q2d(stream_->time_base);
 
     /*
@@ -816,7 +808,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
     if (av_sample_fmt_is_planar(codecCtx_->sample_fmt) && !planarAudioFormat){
         needsResampling = true;
     }
-    if (outputSampleRate != resamplerInputRate){
+    if (outputSampleRate != inputSampleRate){
         needsResampling = true;
     }
     if (needsResampling){
@@ -837,7 +829,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
         }
         av_channel_layout_default(&outLayout, outputNumChannels);
         int swrErr = swr_alloc_set_opts2(&swr, &outLayout, outputSampleFmt, outputSampleRate,
-                                         &inLayout, codecCtx_->sample_fmt, resamplerInputRate, 0, nullptr);
+                                         &inLayout, codecCtx_->sample_fmt, inputSampleRate, 0, nullptr);
         av_channel_layout_uninit(&inLayout);
         av_channel_layout_uninit(&outLayout);
         if (swrErr < 0 || swr == nullptr || swr_init(swr) < 0)
@@ -921,7 +913,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
                     {
                         h.count = written;
                     }
-                    mafFrame->timestamp = getTimestamp(std::max(0.0, passEnd / playbackSpeed - written / (double)outputSampleRate));
+                    mafFrame->timestamp = getTimestamp(std::max(0.0, passEnd - written / (double)outputSampleRate));
                     BufferInfoHeader::WriteAccessorsHeaders(mafFrame->data, headers);
                     dstSamplesWritten = dstSampleCapacity;
                 }
@@ -935,7 +927,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
                     }
                     if (dstSamplesWritten == 0)
                     {
-                        mafFrame->timestamp = getTimestamp(std::max(0.0, passEnd / playbackSpeed - written / (double)outputSampleRate));
+                        mafFrame->timestamp = getTimestamp(std::max(0.0, passEnd - written / (double)outputSampleRate));
                     }
                     dstSamplesWritten += written;
                 }
@@ -1084,7 +1076,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
                     progress = true;
                     uint8_t* pData = mafFrame->data;
                     if (dstSamplesWritten == 0 && !useAccessorHeaders){
-                        mafFrame->timestamp = getTimestamp(std::max(0.0, (base + (avFrameSourceTime - rangeStart_) + srcSamplesRead / (double)inputSampleRate) / playbackSpeed));
+                        mafFrame->timestamp = getTimestamp(std::max(0.0, base + (avFrameSourceTime - rangeStart_) + srcSamplesRead / (double)inputSampleRate));
                     }
 
                     if (useAccessorHeaders)
@@ -1151,7 +1143,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
                         {
                             h.count = writtenCount;
                         }
-                        mafFrame->timestamp = getTimestamp(std::max(0.0, (base + (avFrameSourceTime - rangeStart_) + srcSamplesRead / (double)inputSampleRate) / playbackSpeed));
+                        mafFrame->timestamp = getTimestamp(std::max(0.0, base + (avFrameSourceTime - rangeStart_) + srcSamplesRead / (double)inputSampleRate));
                         BufferInfoHeader::WriteAccessorsHeaders(mafFrame->data, headers);
                         srcSamplesRead += chunk;
                         if (srcSamplesRead >= avFrame->nb_samples){

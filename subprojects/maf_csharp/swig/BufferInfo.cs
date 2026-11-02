@@ -169,16 +169,6 @@ public class BufferInfo : global::System.IDisposable {
     } 
   }
 
-  public float playbackSpeed {
-    set {
-      mafPINVOKE.BufferInfo_playbackSpeed_set(swigCPtr, value);
-    } 
-    get {
-      float ret = mafPINVOKE.BufferInfo_playbackSpeed_get(swigCPtr);
-      return ret;
-    } 
-  }
-
   public BufferInfo() : this(mafPINVOKE.new_BufferInfo(), true) {
   }
 

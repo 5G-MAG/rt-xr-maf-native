@@ -3868,28 +3868,6 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_maf_BufferInfo_outputMedia_get(void * jarg1
 }
 
 
-SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferInfo_playbackSpeed_set(void * jarg1, float jarg2) {
-  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
-  float arg2 ;
-  
-  arg1 = (MAF::BufferInfo *)jarg1; 
-  arg2 = (float)jarg2; 
-  if (arg1) (arg1)->playbackSpeed = arg2;
-}
-
-
-SWIGEXPORT float SWIGSTDCALL CSharp_maf_BufferInfo_playbackSpeed_get(void * jarg1) {
-  float jresult ;
-  MAF::BufferInfo *arg1 = (MAF::BufferInfo *) 0 ;
-  float result;
-  
-  arg1 = (MAF::BufferInfo *)jarg1; 
-  result = (float) ((arg1)->playbackSpeed);
-  jresult = result; 
-  return jresult;
-}
-
-
 SWIGEXPORT void * SWIGSTDCALL CSharp_maf_new_BufferInfo() {
   void * jresult ;
   MAF::BufferInfo *result = 0 ;

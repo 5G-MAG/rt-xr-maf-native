@@ -891,12 +891,6 @@ class mafPINVOKE {
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_outputMedia_get")]
   public static extern global::System.IntPtr BufferInfo_outputMedia_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_playbackSpeed_set")]
-  public static extern void BufferInfo_playbackSpeed_set(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_playbackSpeed_get")]
-  public static extern float BufferInfo_playbackSpeed_get(global::System.Runtime.InteropServices.HandleRef jarg1);
-
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_new_BufferInfo")]
   public static extern global::System.IntPtr new_BufferInfo();
 

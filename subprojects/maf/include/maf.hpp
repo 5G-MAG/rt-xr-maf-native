@@ -240,8 +240,6 @@ struct BufferInfo
     bool immutable = true;
     bool normalized = false;
     OutputMedia outputMedia;
-    // audio buffers: playback speed of the audio signal (MPEG_audio_spatial playbackSpeed, 0.5 to 2.0), 1.0 is normal speed.
-    float playbackSpeed = 1.0f;
 };
 
 
