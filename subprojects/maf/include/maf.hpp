@@ -168,25 +168,13 @@ enum AttributeType {
     ATTRIB_TANGENT, 
     ATTRIB_WEIGHTS, 
     ATTRIB_JOINTS,
-    // FIXME: workaround the current limitation of the API to signal the expected color format
-    // when this is passed through, the other members
-    TEXTURE_RGB,
-    TEXTURE_GBR_3PLANE_420_UNORM,
-    // MPEG_texture_video formats other than RGB, each one a single OpenGL pixel format
-    TEXTURE_RED,
-    TEXTURE_GREEN,
-    TEXTURE_BLUE,
-    TEXTURE_RG,
-    TEXTURE_RGBA,
-    TEXTURE_BGR,
-    TEXTURE_BGRA,
-    TEXTURE_DEPTH_COMPONENT,
-    // Timed metadata (ISO/IEC 23090-14:2024, clause 7). METADATA_ACCESSOR: the buffer holds the samples of a metadata track as timed
-    // accessor data (Table 8 header when BufferInfo.timedHeader is set, then the sample bytes).
-    // METADATA_SCENE_UPDATE: the buffer is not described by an accessor (MPEG_scene_dynamic, 5.2.1.3); each frame holds
-    // one byte of flags (bit 0: sync sample), one byte update_mode (0xFF: not available), then the sample bytes.
-    METADATA_ACCESSOR,
-    METADATA_SCENE_UPDATE
+    // ISO/IEC 23090-14, clause 6.2: PCM audio data, and binary metadata whose format depends on the referencing
+    // component or extension. The format of a texture is not an attribute: it is BufferInfo.outputMedia.format.
+    ATTRIB_PCM,
+    ATTRIB_METADATA,
+    // MPEG_texture_video YCbCr format G8_B8_R8_3PLANE_420_UNORM (Vulkan Table 76). ColorFormat cannot express the YCbCr
+    // formats, so the value is kept until the specification addresses them.
+    TEXTURE_GBR_3PLANE_420_UNORM
 };
 
 

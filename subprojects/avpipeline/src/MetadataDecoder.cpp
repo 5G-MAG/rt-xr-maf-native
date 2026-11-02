@@ -164,19 +164,16 @@ void MetadataDecoder::DecodeInto(MafBuffer *mafBuffer)
             throw "buffer not allocated";
         }
         const BufferInfo &info = infos.at(0);
-        const bool sceneUpdateBuffer = info.attributeType == AttributeType::METADATA_SCENE_UPDATE;
+        // the buffer of a 'mett' track holds scene updates and has no accessor; the other tracks are read through accessors
+        const bool sceneUpdateBuffer = kind_ == Kind::SCENE_UPDATE;
         const bool halted = false;
 
-        if (kind_ == Kind::SCENE_UPDATE && !sceneUpdateBuffer)
+        if (info.attributeType != AttributeType::ATTRIB_METADATA)
         {
-            throw "a 'mett' track carries scene updates: its buffer has no accessor (METADATA_SCENE_UPDATE)";
+            throw "the buffer of a timed metadata track needs the attribute type ATTRIB_METADATA";
         }
         if (kind_ == Kind::ANIMATION)
         {
-            if (sceneUpdateBuffer)
-            {
-                throw "a 'glat' track is read through a timed accessor, not a scene update buffer";
-            }
             // 5.5.2.2: "The componentType of the referenced accessor shall be BYTE and the type shall be SCALAR"
             if (info.componentType != ComponentType::BYTE || info.type != SampleType::SCALAR)
             {

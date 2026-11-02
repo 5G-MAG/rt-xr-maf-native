@@ -19,7 +19,7 @@
 //
 //   'glat' (7.6)   animation timing; the sample is published unchanged in the data of a timed accessor (BYTE, SCALAR).
 //   'mett' (7.2)   glTF JSON documents and JSON patch documents (scene updates); the buffer has no accessor
-//                  (BufferInfo.attributeType METADATA_SCENE_UPDATE) and each frame holds
+//                  (BufferInfo.attributeType ATTRIB_METADATA) and each frame holds
 //                  [flags: 1 byte, bit 0 set for a sync sample][update_mode: 1 byte, SCENE_UPDATE_MODE_UNKNOWN][sample bytes].
 //   'vcor' (7.4) and 'post' (7.5)  not published: their fields are fixed by the sample syntax in units whose byte order
 //                  ISO/IEC 14496-12 defines, and that document was not available.

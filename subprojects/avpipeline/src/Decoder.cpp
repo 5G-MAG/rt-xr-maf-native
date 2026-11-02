@@ -214,25 +214,25 @@ namespace
         ChannelExtract extract;
     };
 
-    VideoOutputFormat getVideoOutputFormat(AttributeType attributeType)
+    VideoOutputFormat getVideoOutputFormat(ColorFormat format)
     {
-        switch (attributeType)
+        switch (format)
         {
-        case AttributeType::TEXTURE_BGR:
+        case ColorFormat::BGR:
             return {AV_PIX_FMT_BGR24, 3, 3, ChannelExtract::NONE};
-        case AttributeType::TEXTURE_RGBA:
+        case ColorFormat::RGBA:
             return {AV_PIX_FMT_RGBA, 4, 4, ChannelExtract::NONE};
-        case AttributeType::TEXTURE_BGRA:
+        case ColorFormat::BGRA:
             return {AV_PIX_FMT_BGRA, 4, 4, ChannelExtract::NONE};
-        case AttributeType::TEXTURE_RED:
+        case ColorFormat::RED:
             return {AV_PIX_FMT_RGB24, 3, 1, ChannelExtract::RED};
-        case AttributeType::TEXTURE_GREEN:
+        case ColorFormat::GREEN:
             return {AV_PIX_FMT_RGB24, 3, 1, ChannelExtract::GREEN};
-        case AttributeType::TEXTURE_BLUE:
+        case ColorFormat::BLUE:
             return {AV_PIX_FMT_RGB24, 3, 1, ChannelExtract::BLUE};
-        case AttributeType::TEXTURE_RG:
+        case ColorFormat::RG:
             return {AV_PIX_FMT_RGB24, 3, 2, ChannelExtract::RG};
-        case AttributeType::TEXTURE_DEPTH_COMPONENT:
+        case ColorFormat::DEPTH_COMPONENT:
             // a single component taken from the luma of the decoded picture
             return {AV_PIX_FMT_GRAY8, 1, 1, ChannelExtract::NONE};
         default:
@@ -335,7 +335,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
     AVFrame *avFrame = av_frame_alloc();
 
     // conversion
-    const VideoOutputFormat outFmt = getVideoOutputFormat(info.attributeType);
+    const VideoOutputFormat outFmt = getVideoOutputFormat(info.outputMedia.format);
     struct SwsContext *swsCtx = nullptr;
     std::vector<uint8_t> converted;
 

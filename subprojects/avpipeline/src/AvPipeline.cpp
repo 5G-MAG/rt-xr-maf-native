@@ -108,7 +108,13 @@ static bool compareBufferIds(MafBuffer* &a, MafBuffer* &b){
 }
 
 static bool isMetadataAttribute(AttributeType a){
-    return a == AttributeType::METADATA_ACCESSOR || a == AttributeType::METADATA_SCENE_UPDATE;
+    return a == AttributeType::ATTRIB_METADATA;
+}
+
+// a buffer is a texture when its output is a picture (outputMedia gives a size) or YCbCr: the attribute type does not
+// apply to textures
+static bool isTextureBuffer(const BufferInfo &info){
+    return info.outputMedia.width > 0 || info.outputMedia.height > 0 || info.attributeType == AttributeType::TEXTURE_GBR_3PLANE_420_UNORM;
 }
 
 static void mapTracksToMafBuffers(AVFormatContext* avFmtCtx, std::map<uint32_t, MafBuffer> &streamBufferMap, std::vector<BufferInfo> buffers, AlternativeLocation* alt){
@@ -116,7 +122,7 @@ static void mapTracksToMafBuffers(AVFormatContext* avFmtCtx, std::map<uint32_t, 
     Helper function to map tracks to buffers.
     - mapping is done according to AlternativeLocation.tracks if it is defined, in that case only buffers explicitly referenced by tracks are mapped
     - if AlternativeLocation.tracks is undefined, buffers are sorted based on bufferId and mapped to tracks in increasing order;
-      buffers of timed metadata (METADATA_*) take the metadata (DATA) streams, the other buffers the remaining streams
+      buffers of timed metadata (ATTRIB_METADATA) take the metadata (DATA) streams, the other buffers the remaining streams
     - throws if buffers is not consistent, or if not all buffers could be mapped to a track.
     */
     std::map<int, MafBuffer> idMafBuffer;
@@ -147,9 +153,9 @@ static void mapTracksToMafBuffers(AVFormatContext* avFmtCtx, std::map<uint32_t, 
         }
         size_t nextMetadata = 0, nextVideo = 0, nextAudio = 0, nextOther = 0;
         for(size_t i=0; i < sorted.size(); i++ ){
-            AttributeType at = sorted[i]->second[0].attributeType;
-            bool metadata = isMetadataAttribute(at);
-            bool texture = at >= AttributeType::TEXTURE_RGB && at <= AttributeType::TEXTURE_DEPTH_COMPONENT;
+            const BufferInfo &first = sorted[i]->second[0];
+            bool metadata = isMetadataAttribute(first.attributeType);
+            bool texture = !metadata && isTextureBuffer(first);
             std::vector<uint32_t>& pool = metadata ? metadataStreams : (texture ? videoStreams : audioStreams);
             size_t& next = metadata ? nextMetadata : (texture ? nextVideo : nextAudio);
             uint32_t chosen;
