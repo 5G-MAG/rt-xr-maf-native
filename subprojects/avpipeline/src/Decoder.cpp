@@ -66,6 +66,24 @@ extern "C"
 
 using ms = std::chrono::duration<double, std::milli>;
 
+bool HasTimedAccessorHeader(const std::vector<MAF::BufferInfo> &infos)
+{
+    if (infos.empty())
+    {
+        return false;
+    }
+    int total = 0;
+    for (const auto &bi : infos)
+    {
+        BufferInfoHeader h;
+        h.immutable = true;
+        h.componentType = bi.componentType;
+        h.type = bi.type;
+        total += h.GetHeaderSize();
+    }
+    return total > 0 && infos.at(0).offset >= total;
+}
+
 
 static void idleSleep()
 {
@@ -330,6 +348,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
 {
     BufferHandler* handler = mafBuffer->first;
     const BufferInfo info = mafBuffer->second.at(0);
+    const bool timedHeader = HasTimedAccessorHeader(mafBuffer->second);
 
     // decoding
     AVFrame *avFrame = av_frame_alloc();
@@ -356,15 +375,13 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
         // layout of a buffer frame: the timed accessor information header when requested, then the picture
         BufferInfoHeader header;
         int headerSize = 0;
-        if (info.timedHeader)
+        if (timedHeader)
         {
-            header.immutable = info.immutable;
             header.componentType = info.componentType;
             header.type = info.type;
-            header.normalized = info.normalized;
             headerSize = header.GetHeaderSize();
         }
-        const uint32_t dataOffset = info.timedHeader ? (uint32_t)headerSize : (info.offset > 0 ? (uint32_t)info.offset : 0);
+        const uint32_t dataOffset = timedHeader ? (uint32_t)headerSize : (info.offset > 0 ? (uint32_t)info.offset : 0);
         if (maxFrameBytes_ <= dataOffset)
         {
             throw "buffer frame is too small for a picture";
@@ -488,7 +505,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                         }
 
                         const uint32_t dataBytes = (uint32_t)(pixels * (size_t)outFmt.bytesPerPixel);
-                        if (info.timedHeader)
+                        if (timedHeader)
                         {
                             header.timestampDelta = 0.0f;
                             header.byteOffset = 0;
@@ -773,8 +790,8 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
     AVSampleFormat outputSampleFmt = GetAVSampleFormat(bufferInfo.at(0).componentType, planarAudioFormat);
     const int inputSampleRate = codecCtx_->sample_rate;
     const int outputSampleRate = bufferInfo.at(0).outputMedia.sampleRate > 0 ? (int)bufferInfo.at(0).outputMedia.sampleRate : inputSampleRate;
-    // The timed accessor information header is written when the scene signals it (a bufferView on the timed accessor).
-    const bool useAccessorHeaders = bufferInfo.at(0).timedHeader;
+    // The timed accessor information header (immutable layout) is written when the buffer layout has one, see HasTimedAccessorHeader.
+    const bool useAccessorHeaders = HasTimedAccessorHeader(bufferInfo);
     // one buffer carries one signal: all its accessors share the sample rate
     for (const auto &bi : bufferInfo)
     {
@@ -797,7 +814,7 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
     int accessorsHeadersLength = 0;
     if (useAccessorHeaders)
     {
-        headers = BufferInfoHeader::CreateAccessorsHeaders(&(bufferInfo), bufferInfo.at(0).immutable);
+        headers = BufferInfoHeader::CreateAccessorsHeaders(&(bufferInfo), true);
         BufferInfoHeader::ComputeTotalHeadersLength(headers, accessorsHeadersLength);
     }
 

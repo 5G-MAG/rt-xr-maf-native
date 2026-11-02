@@ -222,11 +222,6 @@ struct BufferInfo
     int offset;
     int stride;
     AttributeType attributeType;
-    // timedHeader: the pipeline writes a timed accessor information header (Table 8) before the data of
-    // every frame. immutable and normalized describe that header.
-    bool timedHeader = false;
-    bool immutable = true;
-    bool normalized = false;
     OutputMedia outputMedia;
 };
 

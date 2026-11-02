@@ -185,20 +185,20 @@ void MetadataDecoder::DecodeInto(MafBuffer *mafBuffer)
         // (Table 8), then the sample bytes, which belong to the first accessor; the other accessors of the buffer get count 0
         std::vector<BufferInfoHeader> headers;
         int headersLength = 0;
-        if (!sceneUpdateBuffer && info.timedHeader)
+        const bool timedHeader = !sceneUpdateBuffer && HasTimedAccessorHeader(infos);
+        if (timedHeader)
         {
             headers.resize(infos.size());
             for (size_t i = 0; i < infos.size(); i++)
             {
-                headers[i].immutable = infos[i].immutable;
+                headers[i].immutable = true;
                 headers[i].componentType = infos[i].componentType;
                 headers[i].type = infos[i].type;
-                headers[i].normalized = infos[i].normalized;
                 headersLength += headers[i].GetHeaderSize();
             }
         }
         const uint32_t dataOffset = sceneUpdateBuffer ? (uint32_t)SCENE_UPDATE_PREFIX_BYTES
-                                    : (info.timedHeader ? (uint32_t)headersLength : (info.offset > 0 ? (uint32_t)info.offset : 0));
+                                    : (timedHeader ? (uint32_t)headersLength : (info.offset > 0 ? (uint32_t)info.offset : 0));
         const size_t itemSize = (size_t)componentSize(info.componentType) * (size_t)sampleSize(info.type);
         if (!halted && maxFrameBytes_ < dataOffset)
         {
@@ -329,7 +329,7 @@ void MetadataDecoder::DecodeInto(MafBuffer *mafBuffer)
                     data[0] = document ? SCENE_UPDATE_FLAG_SYNC : 0;
                     data[1] = SCENE_UPDATE_MODE_UNKNOWN;
                 }
-                else if (info.timedHeader)
+                else if (timedHeader)
                 {
                     for (size_t i = 0; i < headers.size(); i++)
                     {

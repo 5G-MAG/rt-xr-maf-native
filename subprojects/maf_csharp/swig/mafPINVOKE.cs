@@ -867,24 +867,6 @@ class mafPINVOKE {
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_attributeType_get")]
   public static extern int BufferInfo_attributeType_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_timedHeader_set")]
-  public static extern void BufferInfo_timedHeader_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_timedHeader_get")]
-  public static extern bool BufferInfo_timedHeader_get(global::System.Runtime.InteropServices.HandleRef jarg1);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_immutable_set")]
-  public static extern void BufferInfo_immutable_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_immutable_get")]
-  public static extern bool BufferInfo_immutable_get(global::System.Runtime.InteropServices.HandleRef jarg1);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_normalized_set")]
-  public static extern void BufferInfo_normalized_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
-
-  [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_normalized_get")]
-  public static extern bool BufferInfo_normalized_get(global::System.Runtime.InteropServices.HandleRef jarg1);
-
   [global::System.Runtime.InteropServices.DllImport("libmaf_cs", EntryPoint="CSharp_maf_BufferInfo_outputMedia_set")]
   public static extern void BufferInfo_outputMedia_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 

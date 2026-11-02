@@ -38,6 +38,13 @@ extern "C"
 
 #include <MafBuffer.hpp>
 
+// Whether the buffer of these accessors has a timed accessor information header (ISO/IEC 23090-14, Table 8) before the
+// data of each frame. 5.2.2.3 has the presentation engine pass the header configuration to the MAF but the MAF API of
+// clause 6 has no field for it: the header is present when the data of the first accessor starts at least after the
+// headers of the accessors (the layout the glTF has when the header bufferView precedes the data), and the header is
+// written with the immutable layout.
+bool HasTimedAccessorHeader(const std::vector<MAF::BufferInfo> &infos);
+
 // Input of a decoder thread: compressed packets in decoding order, and markers placed between them.
 // A LOOP marker makes the decoder output every frame it still holds, then continue with a new timestamp base;
 // an END marker makes it output every frame it still holds, then stop.

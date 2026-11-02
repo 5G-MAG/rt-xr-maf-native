@@ -128,36 +128,6 @@ public class BufferInfo : global::System.IDisposable {
     } 
   }
 
-  public bool timedHeader {
-    set {
-      mafPINVOKE.BufferInfo_timedHeader_set(swigCPtr, value);
-    } 
-    get {
-      bool ret = mafPINVOKE.BufferInfo_timedHeader_get(swigCPtr);
-      return ret;
-    } 
-  }
-
-  public bool immutable {
-    set {
-      mafPINVOKE.BufferInfo_immutable_set(swigCPtr, value);
-    } 
-    get {
-      bool ret = mafPINVOKE.BufferInfo_immutable_get(swigCPtr);
-      return ret;
-    } 
-  }
-
-  public bool normalized {
-    set {
-      mafPINVOKE.BufferInfo_normalized_set(swigCPtr, value);
-    } 
-    get {
-      bool ret = mafPINVOKE.BufferInfo_normalized_get(swigCPtr);
-      return ret;
-    } 
-  }
-
   public OutputMedia outputMedia {
     set {
       mafPINVOKE.BufferInfo_outputMedia_set(swigCPtr, OutputMedia.getCPtr(value));
