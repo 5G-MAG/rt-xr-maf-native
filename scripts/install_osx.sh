@@ -20,6 +20,14 @@ fi
 
 cp $BASEDIR/subprojects/maf_csharp/swig/*.cs $DESTDIR/maf/swig/
 
+# the rt-xr-maf-native commit the libraries and bindings are built from
+if [ -f "$BUILDDIR/rt-xr-maf-native.version" ]
+then
+    cp $BUILDDIR/rt-xr-maf-native.version $DESTDIR/
+else
+    echo "warning: $BUILDDIR/rt-xr-maf-native.version not found, $DESTDIR/rt-xr-maf-native.version is not updated" >&2
+fi
+
 # copy FFmpeg dependency to Unity project
 if [ -d "$DESTDIR/dependencies/ffmpeg/7.1/osx/arm64" ]
 then
