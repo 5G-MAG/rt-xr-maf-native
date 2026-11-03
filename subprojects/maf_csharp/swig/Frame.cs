@@ -97,6 +97,36 @@ public class Frame : global::System.IDisposable {
     } 
   }
 
+  public byte extraFrameInfoFlags {
+    set {
+      mafPINVOKE.Frame_extraFrameInfoFlags_set(swigCPtr, value);
+    } 
+    get {
+      byte ret = mafPINVOKE.Frame_extraFrameInfoFlags_get(swigCPtr);
+      return ret;
+    } 
+  }
+
+  public uint width {
+    set {
+      mafPINVOKE.Frame_width_set(swigCPtr, value);
+    } 
+    get {
+      uint ret = mafPINVOKE.Frame_width_get(swigCPtr);
+      return ret;
+    } 
+  }
+
+  public uint height {
+    set {
+      mafPINVOKE.Frame_height_set(swigCPtr, value);
+    } 
+    get {
+      uint ret = mafPINVOKE.Frame_height_get(swigCPtr);
+      return ret;
+    } 
+  }
+
   public Frame(byte i, ulong t, uint byteLength, global::System.IntPtr buffer) : this(mafPINVOKE.new_Frame__SWIG_0(i, t, byteLength, buffer), true) {
   }
 
