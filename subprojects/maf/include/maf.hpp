@@ -171,10 +171,7 @@ enum AttributeType {
     // ISO/IEC 23090-14, clause 6.2: PCM audio data, and binary metadata whose format depends on the referencing
     // component or extension. The format of a texture is not an attribute: it is BufferInfo.outputMedia.format.
     ATTRIB_PCM,
-    ATTRIB_METADATA,
-    // MPEG_texture_video YCbCr format G8_B8_R8_3PLANE_420_UNORM (Vulkan Table 76). ColorFormat cannot express the YCbCr
-    // formats, so the value is kept until the specification addresses them.
-    TEXTURE_GBR_3PLANE_420_UNORM
+    ATTRIB_METADATA
 };
 
 
@@ -199,7 +196,13 @@ enum ColorFormat {
     RGBA,
     BGR,
     BGRA,
-    DEPTH_COMPONENT
+    DEPTH_COMPONENT,
+    // MPEG_texture_video YCbCr formats (Vulkan VkFormat), not in the IDL of clause 6.2. The planes are stored one after
+    // the other without padding, the chroma planes at half the width and height of the picture (rounded up):
+    // the Y plane, then the Cb plane, then the Cr plane
+    G8_B8_R8_3PLANE_420_UNORM,
+    // the Y plane, then one plane of interleaved Cb and Cr samples
+    G8_B8R8_2PLANE_420_UNORM
 };
 
 // ISO/IEC 23090-14, clause 6.2: the format of the media the pipeline outputs. width and height are those of a texture

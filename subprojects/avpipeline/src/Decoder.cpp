@@ -46,6 +46,7 @@ extern "C"
 #include <libavutil/channel_layout.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
+#include <libavutil/pixdesc.h>
 #include <libavcodec/avcodec.h>
 #include <libavcodec/packet.h>
 #include <libavformat/avformat.h>
@@ -221,7 +222,8 @@ namespace
         RED,   // the converted picture is RGB24, one component is stored
         GREEN,
         BLUE,
-        RG
+        RG,
+        PLANAR // the converter writes the YCbCr planes as they are stored (see ColorFormat)
     };
 
     struct VideoOutputFormat
@@ -253,14 +255,56 @@ namespace
         case ColorFormat::DEPTH_COMPONENT:
             // a single component taken from the luma of the decoded picture
             return {AV_PIX_FMT_GRAY8, 1, 1, ChannelExtract::NONE};
+        // YCbCr 4:2:0: the decoded samples are stored as they are when the decoder outputs this layout (see isStoredLayout),
+        // the converter only produces it from other layouts; the conversion to RGB is left to the renderer (MPEG_sampler_YCbCr)
+        case ColorFormat::G8_B8_R8_3PLANE_420_UNORM:
+            return {AV_PIX_FMT_YUV420P, 0, 0, ChannelExtract::PLANAR};
+        case ColorFormat::G8_B8R8_2PLANE_420_UNORM:
+            return {AV_PIX_FMT_NV12, 0, 0, ChannelExtract::PLANAR};
         default:
             return {AV_PIX_FMT_RGB24, 3, 3, ChannelExtract::NONE};
         }
     }
 
+    // Bytes stored in a buffer frame for a picture of the given size
+    size_t pictureBytes(const VideoOutputFormat &fmt, int w, int h)
+    {
+        if (fmt.extract == ChannelExtract::PLANAR)
+        {
+            // a luma plane, and two chroma planes at half the width and height (rounded up)
+            return (size_t)w * (size_t)h + 2 * (size_t)((w + 1) / 2) * (size_t)((h + 1) / 2);
+        }
+        return (size_t)w * (size_t)h * (size_t)fmt.bytesPerPixel;
+    }
+
+    // Whether a decoded picture has the planes of a stored YCbCr format, so that its samples are stored as decoded
+    bool isStoredLayout(int frameFormat, AVPixelFormat stored)
+    {
+        if (stored == AV_PIX_FMT_YUV420P)
+        {
+            // yuvj420p only differs by its range, which MPEG_sampler_YCbCr gives
+            return frameFormat == AV_PIX_FMT_YUV420P || frameFormat == AV_PIX_FMT_YUVJ420P;
+        }
+        return frameFormat == stored;
+    }
+
+    // Copies the rows of a decoded plane without the padding of its lines
+    void copyPlane(uint8_t *dst, const uint8_t *src, int srcStride, int rowBytes, int rows)
+    {
+        if (srcStride == rowBytes)
+        {
+            memcpy(dst, src, (size_t)rowBytes * (size_t)rows);
+            return;
+        }
+        for (int y = 0; y < rows; y++)
+        {
+            memcpy(dst + (size_t)y * (size_t)rowBytes, src + (ptrdiff_t)y * srcStride, (size_t)rowBytes);
+        }
+    }
+
     // Size at which a decoded picture is stored: the decoded size, reduced (keeping the aspect ratio) when it exceeds
     // the maximum picture size of the texture or does not fit in the buffer frame.
-    void fitPictureSize(int w, int h, uint32_t maxW, uint32_t maxH, uint32_t capacityBytes, int bytesPerPixel, int &outW, int &outH)
+    void fitPictureSize(int w, int h, uint32_t maxW, uint32_t maxH, uint32_t capacityBytes, double bytesPerPixel, int &outW, int &outH)
     {
         double scale = 1.0;
         if (maxW > 0 && (uint32_t)w > maxW)
@@ -271,7 +315,7 @@ namespace
         {
             scale = std::min(scale, (double)maxH / (double)h);
         }
-        double bytes = (double)w * (double)h * (double)bytesPerPixel;
+        double bytes = (double)w * (double)h * bytesPerPixel;
         if (bytes * scale * scale > (double)capacityBytes)
         {
             scale = std::min(scale, std::sqrt((double)capacityBytes / bytes));
@@ -357,6 +401,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
     const VideoOutputFormat outFmt = getVideoOutputFormat(info.outputMedia.format);
     struct SwsContext *swsCtx = nullptr;
     std::vector<uint8_t> converted;
+    bool loggedConversion = false;
 
     const double timeBase = av_q2d(stream_->time_base);
     double frameDuration = 0.04;
@@ -460,56 +505,121 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                         const int srcH = avFrame->height;
                         int outW = srcW;
                         int outH = srcH;
-                        fitPictureSize(srcW, srcH, info.outputMedia.width, info.outputMedia.height, dataCapacity, outFmt.bytesPerPixel, outW, outH);
-
-                        int flags = (outW != srcW || outH != srcH) ? SWS_BILINEAR : (SWS_FAST_BILINEAR | SWS_FULL_CHR_H_INT | SWS_ACCURATE_RND);
-                        swsCtx = sws_getCachedContext(swsCtx, srcW, srcH, (enum AVPixelFormat)avFrame->format,
-                                                      outW, outH, outFmt.swsFormat, flags, NULL, NULL, NULL);
-                        if (!swsCtx)
+                        const bool planar = outFmt.extract == ChannelExtract::PLANAR;
+                        fitPictureSize(srcW, srcH, info.outputMedia.width, info.outputMedia.height, dataCapacity, planar ? 1.5 : (double)outFmt.bytesPerPixel, outW, outH);
+                        // the chroma planes are rounded up: an odd size may still exceed the buffer frame
+                        while (outH > 1 && pictureBytes(outFmt, outW, outH) > dataCapacity)
                         {
-                            throw "failed to create the picture converter";
+                            outH--;
                         }
 
-                        // converter output goes through a padded intermediate buffer
-                        const size_t convertedBytes = (size_t)outW * (size_t)outH * (size_t)outFmt.swsBytesPerPixel;
-                        converted.resize(convertedBytes + 64);
-                        uint8_t *dstPlanes[4] = {converted.data(), nullptr, nullptr, nullptr};
-                        int dstStride[4] = {outW * outFmt.swsBytesPerPixel, 0, 0, 0};
-                        sws_scale(swsCtx, avFrame->data, avFrame->linesize, 0, srcH, dstPlanes, dstStride);
-
-                        uint8_t *pData = mafFrame->data + dataOffset;
                         const size_t pixels = (size_t)outW * (size_t)outH;
-                        switch (outFmt.extract)
+                        const size_t dataSize = pictureBytes(outFmt, outW, outH);
+                        uint8_t *pData = mafFrame->data + dataOffset;
+
+                        // YCbCr: the decoded samples are stored as they are, MPEG_sampler_YCbCr tells the renderer how to read them
+                        // TODO: zero-copy, with the buffer frame carrying a handle to the decoded picture (CVPixelBuffer/IOSurface,
+                        // AHardwareBuffer, dmabuf) that the renderer imports as a texture, and released back to the decoder once consumed.
+                        // This extends the MAF buffer contract: decoding straight into the buffer frame with get_buffer2 does not fit
+                        // (stride/height alignment, decode vs presentation order, reference frames, hardware decoders)
+                        const bool asDecoded = planar && outW == srcW && outH == srcH && isStoredLayout(avFrame->format, outFmt.swsFormat);
+                        if (asDecoded)
                         {
-                        case ChannelExtract::RED:
-                        case ChannelExtract::GREEN:
-                        case ChannelExtract::BLUE:
-                        {
-                            int c = outFmt.extract == ChannelExtract::RED ? 0 : (outFmt.extract == ChannelExtract::GREEN ? 1 : 2);
-                            for (size_t i = 0; i < pixels; i++)
+                            const int chromaW = (outW + 1) / 2;
+                            const int chromaH = (outH + 1) / 2;
+                            copyPlane(pData, avFrame->data[0], avFrame->linesize[0], outW, outH);
+                            if (outFmt.swsFormat == AV_PIX_FMT_NV12)
                             {
-                                pData[i] = converted[i * 3 + c];
+                                copyPlane(pData + pixels, avFrame->data[1], avFrame->linesize[1], 2 * chromaW, chromaH);
                             }
-                            break;
+                            else
+                            {
+                                copyPlane(pData + pixels, avFrame->data[1], avFrame->linesize[1], chromaW, chromaH);
+                                copyPlane(pData + pixels + (size_t)chromaW * (size_t)chromaH, avFrame->data[2], avFrame->linesize[2], chromaW, chromaH);
+                            }
                         }
-                        case ChannelExtract::RG:
-                            for (size_t i = 0; i < pixels; i++)
+                        else
+                        {
+                            if (planar && !loggedConversion)
                             {
-                                pData[i * 2] = converted[i * 3];
-                                pData[i * 2 + 1] = converted[i * 3 + 1];
+                                // another chroma subsampling or bit depth, or a picture that must be reduced to fit the buffer frame
+                                decLog("the decoded picture (%s, %dx%d) is converted to %s %dx%d", av_get_pix_fmt_name((AVPixelFormat)avFrame->format), srcW, srcH,
+                                       av_get_pix_fmt_name(outFmt.swsFormat), outW, outH);
+                                loggedConversion = true;
                             }
-                            break;
-                        default:
-                            memcpy(pData, converted.data(), pixels * (size_t)outFmt.bytesPerPixel);
-                            break;
+
+                            int flags = (outW != srcW || outH != srcH) ? SWS_BILINEAR : (SWS_FAST_BILINEAR | SWS_FULL_CHR_H_INT | SWS_ACCURATE_RND);
+                            swsCtx = sws_getCachedContext(swsCtx, srcW, srcH, (enum AVPixelFormat)avFrame->format,
+                                                          outW, outH, outFmt.swsFormat, flags, NULL, NULL, NULL);
+                            if (!swsCtx)
+                            {
+                                throw "failed to create the picture converter";
+                            }
+
+                            // converter output goes through a padded intermediate buffer
+                            uint8_t *dstPlanes[4] = {nullptr, nullptr, nullptr, nullptr};
+                            int dstStride[4] = {0, 0, 0, 0};
+                            if (planar)
+                            {
+                                // the planes are written in the layout of the buffer frame, without padding between rows
+                                converted.resize(dataSize + 64);
+                                const int chromaW = (outW + 1) / 2;
+                                const int chromaH = (outH + 1) / 2;
+                                dstPlanes[0] = converted.data();
+                                dstPlanes[1] = converted.data() + pixels;
+                                dstStride[0] = outW;
+                                if (outFmt.swsFormat == AV_PIX_FMT_NV12)
+                                {
+                                    dstStride[1] = 2 * chromaW;
+                                }
+                                else
+                                {
+                                    dstPlanes[2] = dstPlanes[1] + (size_t)chromaW * (size_t)chromaH;
+                                    dstStride[1] = chromaW;
+                                    dstStride[2] = chromaW;
+                                }
+                            }
+                            else
+                            {
+                                converted.resize(pixels * (size_t)outFmt.swsBytesPerPixel + 64);
+                                dstPlanes[0] = converted.data();
+                                dstStride[0] = outW * outFmt.swsBytesPerPixel;
+                            }
+                            sws_scale(swsCtx, avFrame->data, avFrame->linesize, 0, srcH, dstPlanes, dstStride);
+
+                            switch (outFmt.extract)
+                            {
+                            case ChannelExtract::RED:
+                            case ChannelExtract::GREEN:
+                            case ChannelExtract::BLUE:
+                            {
+                                int c = outFmt.extract == ChannelExtract::RED ? 0 : (outFmt.extract == ChannelExtract::GREEN ? 1 : 2);
+                                for (size_t i = 0; i < pixels; i++)
+                                {
+                                    pData[i] = converted[i * 3 + c];
+                                }
+                                break;
+                            }
+                            case ChannelExtract::RG:
+                                for (size_t i = 0; i < pixels; i++)
+                                {
+                                    pData[i * 2] = converted[i * 3];
+                                    pData[i * 2 + 1] = converted[i * 3 + 1];
+                                }
+                                break;
+                            default:
+                                memcpy(pData, converted.data(), dataSize);
+                                break;
+                            }
                         }
 
-                        const uint32_t dataBytes = (uint32_t)(pixels * (size_t)outFmt.bytesPerPixel);
+                        const uint32_t dataBytes = (uint32_t)dataSize;
                         if (timedHeader)
                         {
                             header.timestampDelta = 0.0f;
                             header.byteOffset = 0;
-                            header.count = (uint32_t)pixels;
+                            // the accessor of a planar format has one byte per element (SCALAR), of a packed format one pixel
+                            header.count = planar ? dataBytes : (uint32_t)pixels;
                             header.bufferViewByteOffset = (uint32_t)headerSize;
                             header.bufferViewByteLength = dataBytes;
                             header.bufferViewByteStride = 0;

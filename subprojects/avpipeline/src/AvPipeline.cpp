@@ -111,10 +111,10 @@ static bool isMetadataAttribute(AttributeType a){
     return a == AttributeType::ATTRIB_METADATA;
 }
 
-// a buffer is a texture when its output is a picture (outputMedia gives a size) or YCbCr: the attribute type does not
-// apply to textures
+// a buffer is a texture when its output is a picture (outputMedia gives a size): the attribute type does not apply to
+// textures
 static bool isTextureBuffer(const BufferInfo &info){
-    return info.outputMedia.width > 0 || info.outputMedia.height > 0 || info.attributeType == AttributeType::TEXTURE_GBR_3PLANE_420_UNORM;
+    return info.outputMedia.width > 0 || info.outputMedia.height > 0;
 }
 
 static void mapTracksToMafBuffers(AVFormatContext* avFmtCtx, std::map<uint32_t, MafBuffer> &streamBufferMap, std::vector<BufferInfo> buffers, AlternativeLocation* alt){

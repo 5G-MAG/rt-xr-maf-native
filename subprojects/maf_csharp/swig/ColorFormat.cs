@@ -19,7 +19,9 @@ public enum ColorFormat {
   RGBA,
   BGR,
   BGRA,
-  DEPTH_COMPONENT
+  DEPTH_COMPONENT,
+  G8_B8_R8_3PLANE_420_UNORM,
+  G8_B8R8_2PLANE_420_UNORM
 }
 
 }
