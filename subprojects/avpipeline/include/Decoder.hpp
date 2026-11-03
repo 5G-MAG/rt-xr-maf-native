@@ -39,10 +39,17 @@ extern "C"
 #include <MafBuffer.hpp>
 
 // Whether the buffer of these accessors has a timed accessor information header (ISO/IEC 23090-14, Table 8) before the
-// data of each frame. 5.2.2.3 has the presentation engine pass the header configuration to the MAF but the MAF API of
-// clause 6 has no field for it: the header is present when the data of the first accessor starts at least after the
-// headers of the accessors (the layout the glTF has when the header bufferView precedes the data), and the header is
-// written with the immutable layout.
+// data of each frame.
+//
+// IMPLEMENTATION CONVENTION, NOT PART OF ISO/IEC 23090-14. 5.2.2.3 has the presentation engine pass the header
+// configuration to the MAF, but the MAF API of clause 6 has no field to carry it, so this implementation infers it
+// from the buffer layout:
+// - the header is assumed present when the offset of the first accessor is at least the summed header sizes of all
+//   the accessors of the buffer (the layout produced when the header bufferView precedes the data in the glTF);
+// - the header is always written with the immutable layout, whatever the accessor's MPEG_accessor_timed.immutable.
+// A conforming presentation engine may lay out its buffers differently: data placed at a non-zero offset for another
+// reason is mistaken for a header, and a mutable header is written with the wrong layout. Replace this inference
+// with an explicit field once the MAF API carries the header configuration.
 bool HasTimedAccessorHeader(const std::vector<MAF::BufferInfo> &infos);
 
 // Input of a decoder thread: compressed packets in decoding order, and markers placed between them.

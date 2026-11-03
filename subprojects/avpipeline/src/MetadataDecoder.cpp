@@ -182,7 +182,8 @@ void MetadataDecoder::DecodeInto(MafBuffer *mafBuffer)
         }
 
         // layout of a frame of an accessor buffer: the timed accessor information headers of the accessors of the buffer
-        // (Table 8), then the sample bytes, which belong to the first accessor; the other accessors of the buffer get count 0
+        // (Table 8), then the sample bytes, which belong to the first accessor; the other accessors of the buffer get count 0.
+        // Header presence and its immutable layout are conventions of this implementation, see HasTimedAccessorHeader.
         std::vector<BufferInfoHeader> headers;
         int headersLength = 0;
         const bool timedHeader = !sceneUpdateBuffer && HasTimedAccessorHeader(infos);

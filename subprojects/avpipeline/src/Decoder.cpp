@@ -67,6 +67,8 @@ extern "C"
 
 using ms = std::chrono::duration<double, std::milli>;
 
+// Implementation convention, not normative: header presence is inferred from the offset of the first accessor and
+// the immutable header layout is assumed. See the declaration in Decoder.hpp.
 bool HasTimedAccessorHeader(const std::vector<MAF::BufferInfo> &infos)
 {
     if (infos.empty())
@@ -900,7 +902,8 @@ void AudioDecoder::DecodeInto(MafBuffer *mafBuffer)
     AVSampleFormat outputSampleFmt = GetAVSampleFormat(bufferInfo.at(0).componentType, planarAudioFormat);
     const int inputSampleRate = codecCtx_->sample_rate;
     const int outputSampleRate = bufferInfo.at(0).outputMedia.sampleRate > 0 ? (int)bufferInfo.at(0).outputMedia.sampleRate : inputSampleRate;
-    // The timed accessor information header (immutable layout) is written when the buffer layout has one, see HasTimedAccessorHeader.
+    // The timed accessor information header (immutable layout) is written when the buffer layout has one; both are
+    // conventions of this implementation, see HasTimedAccessorHeader.
     const bool useAccessorHeaders = HasTimedAccessorHeader(bufferInfo);
     // one buffer carries one signal: all its accessors share the sample rate
     for (const auto &bi : bufferInfo)
