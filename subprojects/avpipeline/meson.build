@@ -44,7 +44,7 @@ libav_deps = [libavformat_dep, libavcodec_dep, libavutil_dep, libswscale_dep, li
 #   libav_deps_type_name = dep.type_name()
 # endforeach
 
-avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp'])
+avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp', 'src/MetadataDecoder.cpp'])
 avpipeline_includes = include_directories('include')
 
 avpipeline = both_libraries(

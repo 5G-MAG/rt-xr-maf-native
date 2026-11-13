@@ -92,6 +92,11 @@ public:
     uint64_t timestamp;
     uint32_t length;
     uint8_t * data;
+    // Table 25: bit 0 of extraFrameInfoFlags (the dimensions flag) is set when the frame holds
+    // texture data; width and height are then the size of the picture stored in the frame.
+    uint8_t extraFrameInfoFlags = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
     Frame(uint8_t i = 0, uint64_t t = 0, uint32_t byteLength = 0, uint8_t* buffer = nullptr);
     ~Frame() = default;
 };
@@ -163,10 +168,10 @@ enum AttributeType {
     ATTRIB_TANGENT, 
     ATTRIB_WEIGHTS, 
     ATTRIB_JOINTS,
-    // FIXME: workaround the current limitation of the API to signal the expected color format
-    // when this is passed through, the other members
-    TEXTURE_RGB,
-    TEXTURE_GBR_3PLANE_420_UNORM
+    // ISO/IEC 23090-14, clause 6.2: PCM audio data, and binary metadata whose format depends on the referencing
+    // component or extension. The format of a texture is not an attribute: it is BufferInfo.outputMedia.format.
+    ATTRIB_PCM,
+    ATTRIB_METADATA
 };
 
 
@@ -181,6 +186,36 @@ enum ComponentType
     FLOAT			= 5126
 };
 
+// ISO/IEC 23090-14, clause 6.2: the format of the pixel data of a texture
+enum ColorFormat {
+    RED,
+    GREEN,
+    BLUE,
+    RG,
+    RGB,
+    RGBA,
+    BGR,
+    BGRA,
+    DEPTH_COMPONENT,
+    // MPEG_texture_video YCbCr formats (Vulkan VkFormat), not in the IDL of clause 6.2. The planes are stored one after
+    // the other without padding, the chroma planes at half the width and height of the picture (rounded up):
+    // the Y plane, then the Cb plane, then the Cr plane
+    G8_B8_R8_3PLANE_420_UNORM,
+    // the Y plane, then one plane of interleaved Cb and Cr samples
+    G8_B8R8_2PLANE_420_UNORM
+};
+
+// ISO/IEC 23090-14, clause 6.2: the format of the media the pipeline outputs. width and height are those of a texture
+// (the maximum picture size of MPEG_texture_video), format its pixel format, sampleRate the sample rate of audio.
+// A width, height or sampleRate of 0 is not set: the decoded value is kept.
+struct OutputMedia
+{
+    uint32_t width = 0;
+    uint32_t height = 0;
+    ColorFormat format = ColorFormat::RGB;
+    uint32_t sampleRate = 0;
+};
+
 struct BufferInfo
 {
     int bufferId;
@@ -190,6 +225,7 @@ struct BufferInfo
     int offset;
     int stride;
     AttributeType attributeType;
+    OutputMedia outputMedia;
 };
 
 

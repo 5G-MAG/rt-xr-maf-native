@@ -19,6 +19,9 @@ BUILDDIR=$BASEDIR/builddir/$ARCH
 rm -rf $BUILDDIR
 mkdir -p $BUILDDIR
 
+# the commit the libraries are built from, installed with them (see install_android.sh)
+git -C $BASEDIR describe --always --dirty > $BUILDDIR/rt-xr-maf-native.version
+
 cd $BASEDIR
 meson setup --wipe -Davpipeline -Davpipeline:avcodec_dir=avcodec/android/arm64-v8a -Ddebug=true $BUILDDIR --cross-file $BASEDIR/crossfile/$ARCH
 meson compile -C $BUILDDIR

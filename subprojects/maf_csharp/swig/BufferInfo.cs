@@ -128,6 +128,17 @@ public class BufferInfo : global::System.IDisposable {
     } 
   }
 
+  public OutputMedia outputMedia {
+    set {
+      mafPINVOKE.BufferInfo_outputMedia_set(swigCPtr, OutputMedia.getCPtr(value));
+    } 
+    get {
+      global::System.IntPtr cPtr = mafPINVOKE.BufferInfo_outputMedia_get(swigCPtr);
+      OutputMedia ret = (cPtr == global::System.IntPtr.Zero) ? null : new OutputMedia(cPtr, false);
+      return ret;
+    } 
+  }
+
   public BufferInfo() : this(mafPINVOKE.new_BufferInfo(), true) {
   }
 
