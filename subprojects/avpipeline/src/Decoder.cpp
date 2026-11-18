@@ -168,49 +168,33 @@ size_t DecoderQueue::Size()
 }
 
 
-Decoder *CreateDecoder(AVFormatContext *fmtCtx, uint32_t streamIdx)
+Decoder *CreateDecoder(AVFormatContext *fmtCtx, uint32_t streamIdx, const std::vector<MAF::BufferInfo> &infos)
 {
-
-    const AVCodec *codec;
-    AVCodecContext *codecCtx;
-    AVStream *stream;
-    int err = 0;
     if (streamIdx >= fmtCtx->nb_streams)
     {
         throw "invalid stream id";
     }
-    stream = fmtCtx->streams[streamIdx];
-    if (stream->codecpar->codec_type == AVMediaType::AVMEDIA_TYPE_DATA)
+    AVStream *stream = fmtCtx->streams[streamIdx];
+    switch (stream->codecpar->codec_type)
     {
+    case AVMediaType::AVMEDIA_TYPE_DATA:
         // timed metadata tracks are not decoded (ISO/IEC 23090-14:2024, clause 7)
         return CreateMetadataDecoder(fmtCtx, streamIdx);
-    }
-    codec = avcodec_find_decoder(stream->codecpar->codec_id);
-    if (!codec)
+    case AVMediaType::AVMEDIA_TYPE_VIDEO:
     {
-        throw AVERROR(EINVAL);
+        if (infos.empty())
+        {
+            throw "missing BufferInfo";
+        }
+        std::unique_ptr<VideoDecodeBackend> backend = CreateVideoBackend(stream, infos.at(0));
+        decLog("stream %u: %s video decoder", streamIdx, backend->Name());
+        return new VideoDecoder(stream, std::move(backend));
     }
-    codecCtx = avcodec_alloc_context3(codec);
-
-    if (!codecCtx)
-    {
-        throw AVERROR(ENOMEM);
+    case AVMediaType::AVMEDIA_TYPE_AUDIO:
+        return new AudioDecoder(stream, OpenSoftwareDecoder(stream));
+    default:
+        return nullptr;
     }
-
-    avcodec_parameters_to_context(codecCtx, stream->codecpar);
-
-    if ((err = avcodec_open2(codecCtx, codec, nullptr)) < 0)
-    {
-        throw err;
-    }
-
-    if (codec->type == AVMediaType::AVMEDIA_TYPE_VIDEO)
-        return new VideoDecoder(stream, codecCtx);
-
-    if (codec->type == AVMediaType::AVMEDIA_TYPE_AUDIO)
-        return new AudioDecoder(stream, codecCtx);
-
-    return nullptr;
 }
 
 /*******************************************************************************************************************************************/
@@ -486,21 +470,18 @@ namespace
 
 } // namespace
 
-VideoDecoder::VideoDecoder(AVStream *stream, AVCodecContext *ctx)
+VideoDecoder::VideoDecoder(AVStream *stream, std::unique_ptr<VideoDecodeBackend> backend)
 {
     stream_ = stream;
-    codecCtx_ = ctx;
+    backend_ = std::move(backend);
+    codecCtx_ = backend_->Context();
     bufferUpdateMx_ = new std::mutex();
 }
 
 VideoDecoder::~VideoDecoder()
 {
     Stop();
-    if (codecCtx_)
-    {
-        avcodec_free_context(&codecCtx_);
-    }
-
+    backend_.reset();
     delete bufferUpdateMx_;
 }
 
@@ -547,8 +528,9 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
     const BufferInfo info = mafBuffer->second.at(0);
     const bool timedHeader = HasTimedAccessorHeader(mafBuffer->second);
 
-    // decoding
+    // decoding; swFrame holds a copy in system memory of a picture the backend decoded elsewhere
     AVFrame *avFrame = av_frame_alloc();
+    AVFrame *swFrame = av_frame_alloc();
 
     // conversion
     const VideoOutputFormat outFmt = getVideoOutputFormat(info.outputMedia.format);
@@ -656,8 +638,13 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                     }
                     else
                     {
-                        const int srcW = avFrame->width;
-                        const int srcH = avFrame->height;
+                        AVFrame *pic = backend_->ToSoftware(avFrame, swFrame);
+                        if (pic == nullptr)
+                        {
+                            throw "failed to copy the decoded picture to system memory";
+                        }
+                        const int srcW = pic->width;
+                        const int srcH = pic->height;
                         int outW = srcW;
                         int outH = srcH;
                         const bool planar = outFmt.extract == ChannelExtract::PLANAR;
@@ -677,25 +664,25 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                         // AHardwareBuffer, dmabuf) that the renderer imports as a texture, and released back to the decoder once consumed.
                         // This extends the MAF buffer contract: decoding straight into the buffer frame with get_buffer2 does not fit
                         // (stride/height alignment, decode vs presentation order, reference frames, hardware decoders)
-                        const bool asDecoded = planar && outW == srcW && outH == srcH && (isStoredLayout(avFrame->format, outFmt.swsFormat) || isStoredLayout(avFrame->format, outFmt.threePlanes));
+                        const bool asDecoded = planar && outW == srcW && outH == srcH && (isStoredLayout(pic->format, outFmt.swsFormat) || isStoredLayout(pic->format, outFmt.threePlanes));
                         if (asDecoded)
                         {
                             // the 3-plane libav formats of yuvj only differ by their range
-                            const int srcFormat = isStoredLayout(avFrame->format, outFmt.swsFormat) ? outFmt.swsFormat : outFmt.threePlanes;
-                            storePlanes(pData, avFrame->data, avFrame->linesize, srcFormat, outFmt, outW, outH);
+                            const int srcFormat = isStoredLayout(pic->format, outFmt.swsFormat) ? outFmt.swsFormat : outFmt.threePlanes;
+                            storePlanes(pData, pic->data, pic->linesize, srcFormat, outFmt, outW, outH);
                         }
                         else
                         {
                             if (planar && !loggedConversion)
                             {
                                 // another chroma subsampling or bit depth, or a picture that must be reduced to fit the buffer frame
-                                decLog("the decoded picture (%s, %dx%d) is converted to %s %dx%d", av_get_pix_fmt_name((AVPixelFormat)avFrame->format), srcW, srcH,
+                                decLog("the decoded picture (%s, %dx%d) is converted to %s %dx%d", av_get_pix_fmt_name((AVPixelFormat)pic->format), srcW, srcH,
                                        av_get_pix_fmt_name(outFmt.swsFormat), outW, outH);
                                 loggedConversion = true;
                             }
 
                             int flags = (outW != srcW || outH != srcH) ? SWS_BILINEAR : (SWS_FAST_BILINEAR | SWS_FULL_CHR_H_INT | SWS_ACCURATE_RND);
-                            swsCtx = sws_getCachedContext(swsCtx, srcW, srcH, (enum AVPixelFormat)avFrame->format,
+                            swsCtx = sws_getCachedContext(swsCtx, srcW, srcH, (enum AVPixelFormat)pic->format,
                                                           outW, outH, outFmt.swsFormat, flags, NULL, NULL, NULL);
                             if (!swsCtx)
                             {
@@ -722,7 +709,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                                 dstPlanes[0] = converted.data();
                                 dstStride[0] = outW * outFmt.swsBytesPerPixel;
                             }
-                            sws_scale(swsCtx, avFrame->data, avFrame->linesize, 0, srcH, dstPlanes, dstStride);
+                            sws_scale(swsCtx, pic->data, pic->linesize, 0, srcH, dstPlanes, dstStride);
 
                             switch (outFmt.extract)
                             {
@@ -773,6 +760,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                         mafFrame->width = (uint32_t)outW;
                         mafFrame->height = (uint32_t)outH;
                         av_frame_unref(avFrame);
+                        av_frame_unref(swFrame);
 
                         while (!quit_){
                             try {
@@ -833,6 +821,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
     }
 
     av_frame_free(&avFrame);
+    av_frame_free(&swFrame);
     if (swsCtx)
         sws_freeContext(swsCtx);
     done_ = true;

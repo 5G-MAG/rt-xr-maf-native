@@ -37,6 +37,7 @@ extern "C"
 }
 
 #include <MafBuffer.hpp>
+#include <VideoDecodeBackend.hpp>
 
 // Whether the buffer of these accessors has a timed accessor information header (ISO/IEC 23090-14, Table 8) before the
 // data of each frame.
@@ -100,12 +101,14 @@ public:
     virtual size_t QueuedPackets() = 0;
 };
 
-Decoder *CreateDecoder(AVFormatContext *fmt_ctx, uint32_t streamIdx);
+// infos: the accessors of the buffer the stream is decoded into
+Decoder *CreateDecoder(AVFormatContext *fmt_ctx, uint32_t streamIdx, const std::vector<MAF::BufferInfo> &infos);
 
 class VideoDecoder : public Decoder
 {
 private:
-    AVCodecContext *codecCtx_;
+    std::unique_ptr<VideoDecodeBackend> backend_;
+    AVCodecContext *codecCtx_; // owned by backend_
     AVStream *stream_;
     std::thread thread_;
     std::exception_ptr error_;
@@ -120,7 +123,7 @@ private:
     uint32_t maxFrameBytes_ = 0;
 
 public:
-    VideoDecoder(AVStream *stream, AVCodecContext *ctx);
+    VideoDecoder(AVStream *stream, std::unique_ptr<VideoDecodeBackend> backend);
     ~VideoDecoder();
     void QueuePacket(AVPacket *pkt);
     void DecodeInto(MafBuffer *mafBuffer);

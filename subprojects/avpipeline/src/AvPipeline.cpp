@@ -93,8 +93,8 @@ static int avStreamIdxFromTrackString(AVFormatContext* avFmtCtx, std::string s){
 }
 
 static void createDecoders(AVFormatContext* avFmtCtx, std::map<uint32_t, MafBuffer>* streamBufferMap, std::map<uint32_t, Decoder*>* decoders){
-    for(auto & [streamIdx, _] : *streamBufferMap){
-        Decoder* dec = CreateDecoder(avFmtCtx, streamIdx);
+    for(auto & [streamIdx, mafBuffer] : *streamBufferMap){
+        Decoder* dec = CreateDecoder(avFmtCtx, streamIdx, mafBuffer.second);
         if (dec){
             (*decoders)[streamIdx] = dec;
         } else {
