@@ -109,6 +109,9 @@ class VideoDecoder : public Decoder
 private:
     std::unique_ptr<VideoDecodeBackend> backend_;
     AVCodecContext *codecCtx_; // owned by backend_
+    // native frame buffers: what keeps the picture of each frame alive, released when the frame is written again or
+    // when the decoder is destroyed (the last pictures stay valid after the decoder stops)
+    std::vector<std::shared_ptr<void>> owners_;
     AVStream *stream_;
     std::thread thread_;
     std::exception_ptr error_;

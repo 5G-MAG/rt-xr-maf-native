@@ -6,6 +6,6 @@ pipeline_consumer = executable(
     include_directories : [avpipeline_includes, include_directories('../../maf/test')],
     cpp_args : avpipeline_args,
     link_with : avpipeline.get_shared_lib(),
-    dependencies : [libmaf_dep.as_shared(), libav_deps]
+    dependencies : [libmaf_dep.as_shared(), libav_deps, platform_deps]
 )
 test('pipeline_consumer', pipeline_consumer, timeout : 120)

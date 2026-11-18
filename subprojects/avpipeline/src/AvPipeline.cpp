@@ -19,6 +19,7 @@
 #include <chrono>
 
 #include <AvPipeline.hpp>
+#include "video/NativeUploader.hpp"
 
 #ifdef __ANDROID__
 #include <cstdio>
@@ -115,6 +116,36 @@ static bool isMetadataAttribute(AttributeType a){
 // textures
 static bool isTextureBuffer(const BufferInfo &info){
     return info.outputMedia.width > 0 || info.outputMedia.height > 0;
+}
+
+// A native frame buffer (BufferInfo.outputMedia.memory is FRAME_MEMORY_NATIVE) holds the pictures of one video track,
+// in memory the GPU imports. Throws when the buffer can not be one.
+static void checkNativeBuffer(AVFormatContext* avFmtCtx, uint32_t streamIdx, const MafBuffer& mafBuffer){
+#ifndef MAF_NATIVE_FRAMES
+    (void)avFmtCtx; (void)streamIdx; (void)mafBuffer;
+    throw "native frame buffers are not supported by this build";
+#else
+    const BufferInfo& info = mafBuffer.second.at(0);
+    if (mafBuffer.second.size() != 1){
+        throw "a native frame buffer has one accessor";
+    }
+    if (!isTextureBuffer(info)){
+        throw "a native frame buffer is a texture: outputMedia gives its maximum width and height";
+    }
+    if (streamIdx >= avFmtCtx->nb_streams || avFmtCtx->streams[streamIdx]->codecpar->codec_type != AVMEDIA_TYPE_VIDEO){
+        throw "a native frame buffer is mapped to a track that is not a video track";
+    }
+    for (Frame& f : *mafBuffer.first->getFrames()){
+        if (f.data != nullptr){
+            throw "a native frame buffer is allocated with BufferHandler::allocateNative()";
+        }
+    }
+    std::unique_ptr<NativeUploader> uploader = CreateNativeUploader();
+    if (!uploader){
+        throw "native frame buffers are not supported on this platform";
+    }
+    uploader->StoredFormat(info.outputMedia.format); // throws when the platform can not store the format natively
+#endif
 }
 
 static void mapTracksToMafBuffers(AVFormatContext* avFmtCtx, std::map<uint32_t, MafBuffer> &streamBufferMap, std::vector<BufferInfo> buffers, AlternativeLocation* alt){
@@ -240,6 +271,9 @@ void AvMediaPipeline::initialize(MediaInfo mediaInfo, std::vector<BufferInfo> bu
         for (auto &[streamIdx, mafBuffer] : streamBuffers_){
             if (isMetadataAttribute(mafBuffer.second[0].attributeType) && streamIdx < avFmtCtx_->nb_streams && avFmtCtx_->streams[streamIdx]->codecpar->codec_type != AVMEDIA_TYPE_DATA){
                 throw "a timed metadata buffer is mapped to a track that is not a metadata track";
+            }
+            if (mafBuffer.second[0].outputMedia.memory == FRAME_MEMORY_NATIVE){
+                checkNativeBuffer(avFmtCtx_, streamIdx, mafBuffer);
             }
         }
 

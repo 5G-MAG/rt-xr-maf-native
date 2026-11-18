@@ -44,7 +44,14 @@ libav_deps = [libavformat_dep, libavcodec_dep, libavutil_dep, libswscale_dep, li
 #   libav_deps_type_name = dep.type_name()
 # endforeach
 
-avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp', 'src/MetadataDecoder.cpp', 'src/video/VideoDecodeBackend.cpp', 'src/video/HwAccelBackend.cpp', 'src/video/MediaCodecBackend.cpp'])
+avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp', 'src/MetadataDecoder.cpp', 'src/video/VideoDecodeBackend.cpp', 'src/video/HwAccelBackend.cpp', 'src/video/MediaCodecBackend.cpp',
+  'src/video/NativeUploader.cpp', 'src/video/AppleNativeUploader.cpp'])
+
+# platform libraries of the native frames
+platform_deps = []
+if host_machine.system() == 'darwin'
+  platform_deps += dependency('appleframeworks', modules : ['CoreFoundation', 'CoreVideo'])
+endif
 
 # hardware video decoders: VideoToolbox on Apple platforms, MediaCodec on Android; the software decoders remain the
 # fallback
@@ -64,7 +71,7 @@ avpipeline = both_libraries(
     gnu_symbol_visibility : 'default',
     include_directories : [avpipeline_includes],
     cpp_args : avpipeline_args,
-    dependencies: [libmaf_dep.as_shared(), libav_deps],
+    dependencies: [libmaf_dep.as_shared(), libav_deps, platform_deps],
     install: true,
     install_tag: 'avpipeline'
 )

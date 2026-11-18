@@ -55,6 +55,13 @@ meson setup -Davpipeline=true -Davpipeline:hwdecode=disabled ...
 The `AVPIPELINE_HWDECODE` environment variable changes it at run time: `0` uses the software decoders only; `require` fails to decode a stream that no hardware decoder supports (the tests use it to check the hardware decoders).
 
 
+## Native frames
+
+A texture buffer with `outputMedia.memory = FRAME_MEMORY_NATIVE` receives pictures in memory the GPU imports without a copy (see [docs/maf.md](../../docs/maf.md#native-frame-buffers)): IOSurface-backed `CVPixelBuffer`s on Apple platforms. The pipeline keeps a reference to the picture of each frame until the frame is written again or the pipeline is destroyed, so the last pictures stay valid when the media ends or the pipeline stops.
+
+The decoded pictures are converted to the stored format in system memory, then copied into the native pictures.
+
+
 ## Tests
 
 `test/pipeline_consumer.cpp` plays clips encoded at test time through the pipeline, in the role of the Presentation Engine, and checks the frames stored in the texture buffers, including that hardware and software decoding store the same pictures. Run them with `meson test -C <builddir>`.

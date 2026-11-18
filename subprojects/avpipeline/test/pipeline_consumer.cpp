@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <functional>
 #include <map>
@@ -26,6 +27,10 @@
 #include <thread>
 
 #include <AvPipeline.hpp>
+
+#if defined(__APPLE__)
+#include <CoreVideo/CoreVideo.h>
+#endif
 
 #include "check.hpp"
 #include "test_media.hpp"
@@ -120,13 +125,24 @@ std::string clipPath(const char *name)
     return (std::filesystem::temp_directory_path() / (std::string("avpipeline_test_") + name + ".mkv")).string();
 }
 
-// Plays the clip into a CPU texture buffer of the given format and maximum size, and calls onFrame with each frame
-// read and the index of its picture in the clip. Returns the number of pictures seen.
-int play(const testmedia::Clip &clip, ColorFormat format, int maxWidth, int maxHeight, const std::function<void(Frame *, int)> &onFrame)
+enum class Memory
+{
+    CPU,
+    NATIVE
+};
+
+// Plays the clip into a texture buffer of the given format and maximum size, and calls onFrame with each frame read
+// and the index of its picture in the clip. Frames of a native buffer are released once onFrame returns. Returns the
+// number of pictures seen.
+int play(const testmedia::Clip &clip, ColorFormat format, int maxWidth, int maxHeight, const std::function<void(Frame *, int)> &onFrame,
+         Memory memory = Memory::CPU)
 {
     const Layout layout = layoutOf(format);
     BufferHandler handler;
-    handler.allocate(4, (uint32_t)storedBytes(layout, maxWidth, maxHeight));
+    if (memory == Memory::NATIVE)
+        handler.allocateNative(4);
+    else
+        handler.allocate(4, (uint32_t)storedBytes(layout, maxWidth, maxHeight));
 
     BufferInfo info{};
     info.bufferId = 0;
@@ -139,6 +155,7 @@ int play(const testmedia::Clip &clip, ColorFormat format, int maxWidth, int maxH
     info.outputMedia.width = (uint32_t)maxWidth;
     info.outputMedia.height = (uint32_t)maxHeight;
     info.outputMedia.format = format;
+    info.outputMedia.memory = memory == Memory::NATIVE ? FRAME_MEMORY_NATIVE : FRAME_MEMORY_CPU;
 
     AlternativeLocation alt;
     alt.mimeType = "video/x-matroska";
@@ -169,6 +186,8 @@ int play(const testmedia::Clip &clip, ColorFormat format, int maxWidth, int maxH
         int k = (int)std::lround(getTime_s(f->timestamp) * clip.fps);
         onFrame(f, k);
         seen.insert(k);
+        if (memory == Memory::NATIVE)
+            handler.releaseFrame(f->index);
     }
     CHECK((int)seen.size() == clip.frames);
     pipeline.stopFetching();
@@ -299,6 +318,215 @@ TEST_CASE("conversion: a picture larger than the texture is reduced, its size is
     });
     std::filesystem::remove(clip.path);
 }
+
+#if defined(__APPLE__) && defined(MAF_NATIVE_FRAMES)
+
+// The format a native picture of a requested YCbCr format is stored in on Apple platforms: CoreVideo has no 3-plane
+// formats for 4:2:2, 4:4:4 and 10 bits, the 2-plane format has the same samples
+ColorFormat appleStoredFormat(ColorFormat requested)
+{
+    switch (requested)
+    {
+    case G8_B8_R8_3PLANE_422_UNORM: return G8_B8R8_2PLANE_422_UNORM;
+    case G8_B8_R8_3PLANE_444_UNORM: return G8_B8R8_2PLANE_444_UNORM;
+    case G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16: return G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16;
+    case G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16: return G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16;
+    case G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16: return G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16;
+    default: return requested;
+    }
+}
+
+// The CoreVideo pixel format of a stored YCbCr format, video range
+OSType applePixelFormat(ColorFormat stored)
+{
+    switch (stored)
+    {
+    case G8_B8_R8_3PLANE_420_UNORM: return kCVPixelFormatType_420YpCbCr8Planar;
+    case G8_B8R8_2PLANE_420_UNORM: return kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
+    case G8_B8R8_2PLANE_422_UNORM: return kCVPixelFormatType_422YpCbCr8BiPlanarVideoRange;
+    case G8_B8R8_2PLANE_444_UNORM: return kCVPixelFormatType_444YpCbCr8BiPlanarVideoRange;
+    case G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16: return kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange;
+    case G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16: return kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange;
+    case G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16: return kCVPixelFormatType_444YpCbCr10BiPlanarVideoRange;
+    default: return 0;
+    }
+}
+
+// The samples of a planar pixel buffer, without the padding of its rows, in the layout of maf.hpp
+std::vector<uint8_t> readPlanes(CVPixelBufferRef buffer, const Layout &l)
+{
+    const int bps = l.depth > 8 ? 2 : 1;
+    std::vector<uint8_t> out;
+    CVPixelBufferLockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly);
+    for (size_t p = 0; p < CVPixelBufferGetPlaneCount(buffer); p++)
+    {
+        const uint8_t *base = (const uint8_t *)CVPixelBufferGetBaseAddressOfPlane(buffer, p);
+        const size_t stride = CVPixelBufferGetBytesPerRowOfPlane(buffer, p);
+        const size_t rowBytes = CVPixelBufferGetWidthOfPlane(buffer, p) * bps * ((p > 0 && l.twoPlanes) ? 2 : 1);
+        for (size_t y = 0; y < CVPixelBufferGetHeightOfPlane(buffer, p); y++)
+            out.insert(out.end(), base + y * stride, base + y * stride + rowBytes);
+    }
+    CVPixelBufferUnlockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly);
+    return out;
+}
+
+const bool registeredNativeFormatCases = [] {
+    for (const FormatCase &fc : kFormatCases)
+    {
+        std::string name = std::string("native buffer: ") + fc.name;
+        check::cases().push_back({strdup(name.c_str()), [fc] {
+            testmedia::Clip clip{caseFileName((std::string("native_") + fc.name).c_str()), fc.source, fc.width, fc.height, 10, 25};
+            if (!writeClip(clip))
+                return;
+            const ColorFormat stored = appleStoredFormat(fc.stored);
+            const Layout layout = layoutOf(stored);
+            play(clip, fc.stored, fc.width, fc.height, [&](Frame *f, int k) {
+                CHECK(f->length == 0);
+                CHECK((f->extraFrameInfoFlags & 0x01) && f->width == (uint32_t)clip.width && f->height == (uint32_t)clip.height);
+                CVPixelBufferRef buffer = (CVPixelBufferRef)f->data;
+                CHECK(buffer != nullptr);
+                if (!buffer)
+                    return;
+                CHECK(CVPixelBufferGetPixelFormatType(buffer) == applePixelFormat(stored));
+                CHECK(CVPixelBufferGetIOSurface(buffer) != nullptr);
+                CHECK(CVPixelBufferGetWidth(buffer) == (size_t)clip.width && CVPixelBufferGetHeight(buffer) == (size_t)clip.height);
+                std::vector<uint8_t> samples = readPlanes(buffer, layout);
+                CHECK(samples.size() == storedBytes(layout, clip.width, clip.height));
+                if (samples.size() != storedBytes(layout, clip.width, clip.height))
+                    return;
+                int err = maxError(samples.data(), layout, clip.width, clip.height, k);
+                if (err != 0)
+                    std::fprintf(stderr, "  frame %d: max sample error %d\n", k, err);
+                CHECK(err == 0);
+            }, Memory::NATIVE);
+            std::filesystem::remove(clip.path);
+        }});
+    }
+    return true;
+}();
+
+TEST_CASE("native buffer: RGB and RGBA textures are BGRA pixel buffers")
+{
+    testmedia::Clip clip{caseFileName("native_rgba"), AV_PIX_FMT_YUV420P, 64, 36, 3, 25};
+    if (!writeClip(clip))
+        return;
+    for (ColorFormat format : {RGB, RGBA, BGRA})
+    {
+        play(clip, format, 64, 36, [&](Frame *f, int) {
+            CVPixelBufferRef buffer = (CVPixelBufferRef)f->data;
+            CHECK(buffer && CVPixelBufferGetPixelFormatType(buffer) == kCVPixelFormatType_32BGRA);
+            if (!buffer)
+                return;
+            CVPixelBufferLockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly);
+            const uint8_t *px = (const uint8_t *)CVPixelBufferGetBaseAddress(buffer);
+            CHECK(px[3] == 255); // opaque
+            CVPixelBufferUnlockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly);
+        }, Memory::NATIVE);
+    }
+    std::filesystem::remove(clip.path);
+}
+
+TEST_CASE("native buffer: frames that are not released stop the producer, releasing them resumes it")
+{
+    testmedia::Clip clip{caseFileName("native_hold"), AV_PIX_FMT_YUV420P, 64, 36, 10, 25};
+    if (!writeClip(clip))
+        return;
+    BufferHandler handler;
+    handler.allocateNative(4);
+    BufferInfo info{};
+    info.handler = &handler;
+    info.componentType = UNSIGNED_BYTE;
+    info.type = SCALAR;
+    info.outputMedia.width = 64;
+    info.outputMedia.height = 36;
+    info.outputMedia.format = G8_B8R8_2PLANE_420_UNORM;
+    info.outputMedia.memory = FRAME_MEMORY_NATIVE;
+    AlternativeLocation alt;
+    alt.uri = clip.path;
+    MediaInfo media;
+    media.alternatives.push_back(alt);
+    AvMediaPipeline pipeline;
+    pipeline.initialize(media, {info});
+    CHECK(pipeline.state() == READY);
+    pipeline.startFetching(TimeInfo{0.0, 0.0, true, false}, ViewInfo{});
+
+    // read everything that arrives within half a second, without releasing anything
+    std::vector<Frame *> held;
+    std::set<CVPixelBufferRef> pictures;
+    auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+    while (std::chrono::steady_clock::now() < until)
+    {
+        if (Frame *f = handler.readFrame())
+        {
+            held.push_back(f);
+            pictures.insert((CVPixelBufferRef)f->data);
+        }
+        else
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    // the producer can not write a held frame: at most one picture per frame of the buffer
+    CHECK(held.size() == handler.capacity());
+    CHECK(pictures.size() == held.size());
+
+    for (Frame *f : held)
+        handler.releaseFrame(f->index);
+    int more = 0;
+    until = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (more < clip.frames - (int)held.size() && std::chrono::steady_clock::now() < until)
+    {
+        if (Frame *f = handler.readFrame())
+        {
+            more++;
+            handler.releaseFrame(f->index);
+        }
+        else
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    CHECK(more == clip.frames - (int)held.size());
+    pipeline.stopFetching();
+    std::filesystem::remove(clip.path);
+}
+
+#endif
+
+#ifdef MAF_NATIVE_FRAMES
+
+TEST_CASE("native buffer: initialize() rejects a buffer that can not be native")
+{
+    testmedia::Clip clip{caseFileName("native_invalid"), AV_PIX_FMT_YUV420P, 64, 36, 2, 25};
+    if (!writeClip(clip))
+        return;
+    AlternativeLocation alt;
+    alt.uri = clip.path;
+    MediaInfo media;
+    media.alternatives.push_back(alt);
+    auto stateWith = [&](BufferHandler &handler, uint32_t width, uint32_t height) {
+        BufferInfo info{};
+        info.handler = &handler;
+        info.componentType = UNSIGNED_BYTE;
+        info.type = SCALAR;
+        info.outputMedia.width = width;
+        info.outputMedia.height = height;
+        info.outputMedia.format = G8_B8R8_2PLANE_420_UNORM;
+        info.outputMedia.memory = FRAME_MEMORY_NATIVE;
+        AvMediaPipeline pipeline;
+        pipeline.initialize(media, {info});
+        return pipeline.state();
+    };
+    BufferHandler cpu;
+    cpu.allocate(4, 64 * 36 * 2); // not allocated with allocateNative()
+    CHECK(stateWith(cpu, 64, 36) == ERROR);
+    cpu.free();
+    BufferHandler native;
+    native.allocateNative(4);
+    CHECK(stateWith(native, 0, 0) == ERROR); // not a texture
+#ifdef __APPLE__
+    CHECK(stateWith(native, 64, 36) == READY);
+#endif
+    std::filesystem::remove(clip.path);
+}
+
+#endif
 
 #if (defined(__APPLE__) || defined(__ANDROID__)) && AVPIPELINE_HWDECODE
 

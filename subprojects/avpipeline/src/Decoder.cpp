@@ -60,6 +60,7 @@ extern "C"
 
 #include <Decoder.hpp>
 #include <MetadataDecoder.hpp>
+#include "video/NativeUploader.hpp"
 
 // Reformat the decoded audio to the buffer layout: sample format, channel layout (planar/interleaved) and,
 // when BufferInfo.outputMedia.sampleRate is set, the sample rate.
@@ -94,12 +95,11 @@ static void idleSleep()
 }
 
 static Frame* getWritableFrame(BufferHandler* handler){
-    // returns the frame at writeIdx unless it is the current presentation frame
-    if (handler->capacity() < 2)
+    // returns the frame at writeIdx unless the buffer is full there, or the frame is held by the consumer
+    const int idx = handler->getWriteIdx();
+    if (!handler->isWritable(idx))
         return nullptr;
-    if ((handler->getWriteIdx() == handler->getReadIdx()) && (handler->count() > 0))
-        return nullptr;
-    return &handler->getFrames()->at(handler->getWriteIdx());
+    return &handler->getFrames()->at(idx);
 }
 
 
@@ -439,6 +439,42 @@ namespace
         }
     }
 
+    // The planes of a picture stored in the layout of fmt at data
+    PicturePlanes describePlanes(const VideoOutputFormat &fmt, const uint8_t *data, int w, int h)
+    {
+        PicturePlanes planes;
+        if (fmt.extract != ChannelExtract::PLANAR)
+        {
+            planes.count = 1;
+            planes.data[0] = data;
+            planes.rowBytes[0] = planes.stride[0] = w * fmt.bytesPerPixel;
+            planes.rows[0] = h;
+            return planes;
+        }
+        const int bps = fmt.bytesPerSample;
+        const int cw = chromaWidth(fmt, w);
+        const int ch = chromaHeight(fmt, h);
+        planes.count = fmt.twoPlanes ? 2 : 3;
+        planes.data[0] = data;
+        planes.rowBytes[0] = planes.stride[0] = w * bps;
+        planes.rows[0] = h;
+        const int chromaRow = (fmt.twoPlanes ? 2 : 1) * cw * bps;
+        for (int p = 1; p < planes.count; p++)
+        {
+            planes.data[p] = data + (size_t)w * (size_t)h * (size_t)bps + (size_t)(p - 1) * (size_t)chromaRow * (size_t)ch;
+            planes.rowBytes[p] = planes.stride[p] = chromaRow;
+            planes.rows[p] = ch;
+        }
+        return planes;
+    }
+
+    // Whether the YCbCr samples of a decoded picture use the full range of their values
+    bool isFullRange(const AVFrame *pic)
+    {
+        return pic->color_range == AVCOL_RANGE_JPEG || pic->format == AV_PIX_FMT_YUVJ420P || pic->format == AV_PIX_FMT_YUVJ422P ||
+               pic->format == AV_PIX_FMT_YUVJ444P;
+    }
+
     // Size at which a decoded picture is stored: the decoded size, reduced (keeping the aspect ratio) when it exceeds
     // the maximum picture size of the texture or does not fit in the buffer frame.
     void fitPictureSize(int w, int h, uint32_t maxW, uint32_t maxH, uint32_t capacityBytes, double bytesPerPixel, int &outW, int &outH)
@@ -526,14 +562,20 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
 {
     BufferHandler* handler = mafBuffer->first;
     const BufferInfo info = mafBuffer->second.at(0);
-    const bool timedHeader = HasTimedAccessorHeader(mafBuffer->second);
+    // native frame buffer: the pictures are stored in memory the GPU imports, Frame.data is their handle
+    const bool native = info.outputMedia.memory == FRAME_MEMORY_NATIVE;
+    // a handle can not carry the timed accessor information header: native frames have none
+    const bool timedHeader = !native && HasTimedAccessorHeader(mafBuffer->second);
 
     // decoding; swFrame holds a copy in system memory of a picture the backend decoded elsewhere
     AVFrame *avFrame = av_frame_alloc();
     AVFrame *swFrame = av_frame_alloc();
 
     // conversion
-    const VideoOutputFormat outFmt = getVideoOutputFormat(info.outputMedia.format);
+    VideoOutputFormat outFmt = getVideoOutputFormat(info.outputMedia.format);
+    std::unique_ptr<NativeUploader> uploader;
+    ColorFormat storedFormat = info.outputMedia.format;
+    std::vector<uint8_t> nativeStaging; // a picture of a native frame, before it is copied to the native picture
     struct SwsContext *swsCtx = nullptr;
     std::vector<uint8_t> converted;
     bool loggedConversion = false;
@@ -547,6 +589,19 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
 
     try
     {
+        if (native)
+        {
+            uploader = CreateNativeUploader();
+            if (!uploader)
+            {
+                throw "native frame buffers are not supported on this platform";
+            }
+            // the format the native pictures are stored in: the same samples, in a layout of the platform
+            storedFormat = uploader->StoredFormat(info.outputMedia.format);
+            outFmt = getVideoOutputFormat(storedFormat);
+            owners_.assign(handler->capacity(), nullptr);
+        }
+
         // samples of 8 bits are stored as bytes, of 10 bits as 16-bit words (G10X6 formats)
         const ComponentType requiredComponent = (outFmt.extract == ChannelExtract::PLANAR && outFmt.bytesPerSample == 2) ? ComponentType::UNSIGNED_SHORT : ComponentType::UNSIGNED_BYTE;
         if (info.componentType != requiredComponent)
@@ -563,12 +618,13 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
             header.type = info.type;
             headerSize = header.GetHeaderSize();
         }
-        const uint32_t dataOffset = timedHeader ? (uint32_t)headerSize : (info.offset > 0 ? (uint32_t)info.offset : 0);
-        if (maxFrameBytes_ <= dataOffset)
+        const uint32_t dataOffset = native ? 0 : (timedHeader ? (uint32_t)headerSize : (info.offset > 0 ? (uint32_t)info.offset : 0));
+        if (!native && maxFrameBytes_ <= dataOffset)
         {
             throw "buffer frame is too small for a picture";
         }
-        const uint32_t dataCapacity = maxFrameBytes_ - dataOffset;
+        // a native picture is allocated at the size of the picture: only the maximum size of the texture limits it
+        const uint32_t dataCapacity = native ? UINT32_MAX : maxFrameBytes_ - dataOffset;
 
         DecoderQueueItem pending;
         bool draining = false;
@@ -657,7 +713,16 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
 
                         const size_t pixels = (size_t)outW * (size_t)outH;
                         const size_t dataSize = pictureBytes(outFmt, outW, outH);
-                        uint8_t *pData = mafFrame->data + dataOffset;
+                        uint8_t *pData = nullptr;
+                        if (native)
+                        {
+                            nativeStaging.resize(dataSize);
+                            pData = nativeStaging.data();
+                        }
+                        else
+                        {
+                            pData = mafFrame->data + dataOffset;
+                        }
 
                         // YCbCr: the decoded samples are stored as they are, MPEG_sampler_YCbCr tells the renderer how to read them
                         // TODO: zero-copy, with the buffer frame carrying a handle to the decoded picture (CVPixelBuffer/IOSurface,
@@ -740,6 +805,18 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                             }
                         }
 
+                        if (native)
+                        {
+                            NativePicture picture;
+                            if (!uploader->Upload(describePlanes(outFmt, pData, outW, outH), storedFormat, outW, outH, isFullRange(pic), picture))
+                            {
+                                throw "failed to store the picture in a native frame";
+                            }
+                            // the frame is writable: the consumer released the picture it held before
+                            owners_.at(mafFrame->index) = std::move(picture.owner);
+                            mafFrame->data = (uint8_t *)picture.handle;
+                        }
+
                         const uint32_t dataBytes = (uint32_t)dataSize;
                         if (timedHeader)
                         {
@@ -755,7 +832,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
 
                         double timestamp = base + std::max(0.0, sourceTime - rangeStart_);
                         mafFrame->timestamp = getTimestamp(timestamp);
-                        mafFrame->length = dataOffset + dataBytes;
+                        mafFrame->length = native ? 0 : dataOffset + dataBytes;
                         mafFrame->extraFrameInfoFlags = 0x01;
                         mafFrame->width = (uint32_t)outW;
                         mafFrame->height = (uint32_t)outH;

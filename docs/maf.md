@@ -29,6 +29,18 @@ In a native buffer:
 - `Frame.length` is 0. The width and height of the picture are in the frame (`extraFrameInfoFlags` bit 0, Table 25).
 - The handle is owned by the writer. A frame returned by `readFrame()` is held until the consumer calls `releaseFrame(index)`, for example once the GPU is done with the picture. The consumer keeps its own reference to the handle if it uses it after that.
 - `free()` does not release the handles.
+- The picture holds the samples of `outputMedia.format`, in a layout of the platform that the handle describes (its pixel format and planes). A format the platform has no layout for is stored in an equivalent one with the same samples:
+
+  | Requested format | Apple (`CVPixelBuffer` pixel format) |
+  |---|---|
+  | `RGB`, `RGBA`, `BGR`, `BGRA` | `32BGRA` (alpha 1 when the format has none) |
+  | `RED`, `GREEN`, `BLUE`, `DEPTH_COMPONENT` / `RG` | `OneComponent8` / `TwoComponent8` |
+  | `G8_B8_R8_3PLANE_420_UNORM` | `420YpCbCr8Planar` |
+  | 2-plane, and 3-plane 4:2:2 and 4:4:4, YCbCr formats | the 2-plane `YpCbCr…BiPlanar` format with the same sampling and bit depth |
+
+  YCbCr pictures use the full range variant of the pixel format when the decoded picture does.
+
+The Presentation Engine checks `initialize()`: the pipeline is in the `ERROR` state when a native buffer is not allocated with `allocateNative()`, has more than one accessor, has no `outputMedia` size, is not mapped to a video track, or requests a format the platform can not store natively.
 
 Native buffers are built in with the `native_frames` option of `maf` (`auto`, the default, enables them on Apple and Android; `none` disables them):
 ```
