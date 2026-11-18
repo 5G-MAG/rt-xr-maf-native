@@ -95,6 +95,11 @@ namespace
 
 } // namespace
 
+bool HardwareRequired()
+{
+    return hwDecodeMode() == HwDecode::REQUIRED;
+}
+
 std::unique_ptr<VideoDecodeBackend> CreateVideoBackend(AVStream *stream, const MAF::BufferInfo &info)
 {
     (void)info;

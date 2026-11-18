@@ -94,6 +94,19 @@ namespace
             return ctx_;
         }
 
+        void *HardwarePicture(AVFrame *decoded) override
+        {
+#ifdef __APPLE__
+            // VideoToolbox: data[3] is the CVPixelBufferRef of the picture
+            if (type_ == AV_HWDEVICE_TYPE_VIDEOTOOLBOX && decoded->format == hwFormat_)
+            {
+                return decoded->data[3];
+            }
+#endif
+            (void)decoded;
+            return nullptr;
+        }
+
         AVFrame *ToSoftware(AVFrame *decoded, AVFrame *sw) override
         {
             if (decoded->format != hwFormat_)

@@ -576,6 +576,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
     std::unique_ptr<NativeUploader> uploader;
     ColorFormat storedFormat = info.outputMedia.format;
     std::vector<uint8_t> nativeStaging; // a picture of a native frame, before it is copied to the native picture
+    const bool hardwareRequired = HardwareRequired();
     struct SwsContext *swsCtx = nullptr;
     std::vector<uint8_t> converted;
     bool loggedConversion = false;
@@ -694,13 +695,8 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                     }
                     else
                     {
-                        AVFrame *pic = backend_->ToSoftware(avFrame, swFrame);
-                        if (pic == nullptr)
-                        {
-                            throw "failed to copy the decoded picture to system memory";
-                        }
-                        const int srcW = pic->width;
-                        const int srcH = pic->height;
+                        const int srcW = avFrame->width;
+                        const int srcH = avFrame->height;
                         int outW = srcW;
                         int outH = srcH;
                         const bool planar = outFmt.extract == ChannelExtract::PLANAR;
@@ -713,24 +709,43 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
 
                         const size_t pixels = (size_t)outW * (size_t)outH;
                         const size_t dataSize = pictureBytes(outFmt, outW, outH);
-                        uint8_t *pData = nullptr;
-                        if (native)
+                        // native frame of a hardware decoder: the platform hands the picture over, or converts it, without
+                        // going through system memory
+                        NativePicture picture;
+                        void *hwPicture = native ? backend_->HardwarePicture(avFrame) : nullptr;
+                        const bool direct = hwPicture != nullptr && uploader->Convert(hwPicture, storedFormat, outW, outH, isFullRange(avFrame), picture);
+                        if (native && !direct && hardwareRequired)
                         {
-                            nativeStaging.resize(dataSize);
-                            pData = nativeStaging.data();
+                            throw "the picture of a native frame went through system memory (AVPIPELINE_HWDECODE=require)";
                         }
-                        else
+
+                        AVFrame *pic = avFrame;
+                        uint8_t *pData = nullptr;
+                        if (!direct)
                         {
-                            pData = mafFrame->data + dataOffset;
+                            pic = backend_->ToSoftware(avFrame, swFrame);
+                            if (pic == nullptr)
+                            {
+                                throw "failed to copy the decoded picture to system memory";
+                            }
+                            if (native)
+                            {
+                                nativeStaging.resize(dataSize);
+                                pData = nativeStaging.data();
+                            }
+                            else
+                            {
+                                pData = mafFrame->data + dataOffset;
+                            }
                         }
 
                         // YCbCr: the decoded samples are stored as they are, MPEG_sampler_YCbCr tells the renderer how to read them
-                        // TODO: zero-copy, with the buffer frame carrying a handle to the decoded picture (CVPixelBuffer/IOSurface,
-                        // AHardwareBuffer, dmabuf) that the renderer imports as a texture, and released back to the decoder once consumed.
-                        // This extends the MAF buffer contract: decoding straight into the buffer frame with get_buffer2 does not fit
-                        // (stride/height alignment, decode vs presentation order, reference frames, hardware decoders)
-                        const bool asDecoded = planar && outW == srcW && outH == srcH && (isStoredLayout(pic->format, outFmt.swsFormat) || isStoredLayout(pic->format, outFmt.threePlanes));
-                        if (asDecoded)
+                        const bool asDecoded = !direct && planar && outW == srcW && outH == srcH && (isStoredLayout(pic->format, outFmt.swsFormat) || isStoredLayout(pic->format, outFmt.threePlanes));
+                        if (direct)
+                        {
+                            // stored by the platform
+                        }
+                        else if (asDecoded)
                         {
                             // the 3-plane libav formats of yuvj only differ by their range
                             const int srcFormat = isStoredLayout(pic->format, outFmt.swsFormat) ? outFmt.swsFormat : outFmt.threePlanes;
@@ -807,8 +822,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
 
                         if (native)
                         {
-                            NativePicture picture;
-                            if (!uploader->Upload(describePlanes(outFmt, pData, outW, outH), storedFormat, outW, outH, isFullRange(pic), picture))
+                            if (!direct && !uploader->Upload(describePlanes(outFmt, pData, outW, outH), storedFormat, outW, outH, isFullRange(pic), picture))
                             {
                                 throw "failed to store the picture in a native frame";
                             }

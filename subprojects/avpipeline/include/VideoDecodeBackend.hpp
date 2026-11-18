@@ -45,11 +45,22 @@ public:
         (void)sw;
         return decoded;
     }
+    // The native picture of the platform a hardware decoder decoded into (a CVPixelBufferRef on Apple platforms), or
+    // nullptr when the picture is in system memory
+    virtual void *HardwarePicture(AVFrame *decoded)
+    {
+        (void)decoded;
+        return nullptr;
+    }
 };
 
 // Opens the decoder of a video stream with the first backend of the platform that can decode it, the software
 // decoder last. Throws when no backend can decode the stream.
 std::unique_ptr<VideoDecodeBackend> CreateVideoBackend(AVStream *stream, const MAF::BufferInfo &info);
+
+// Whether the environment variable AVPIPELINE_HWDECODE is "require": the hardware decoders must decode the streams,
+// and the pictures of native frames must not go through system memory (for tests)
+bool HardwareRequired();
 
 // Opens the libav software decoder of a stream. Throws a libav error code on failure.
 AVCodecContext *OpenSoftwareDecoder(AVStream *stream);

@@ -52,14 +52,14 @@ The `hwdecode` option controls it at build time: `auto` (default) uses the hardw
 meson setup -Davpipeline=true -Davpipeline:hwdecode=disabled ...
 ```
 
-The `AVPIPELINE_HWDECODE` environment variable changes it at run time: `0` uses the software decoders only; `require` fails to decode a stream that no hardware decoder supports (the tests use it to check the hardware decoders).
+The `AVPIPELINE_HWDECODE` environment variable changes it at run time: `0` uses the software decoders only; `require` fails to decode a stream that no hardware decoder supports, and a picture of a native frame that would go through system memory (the tests use it to check the hardware paths).
 
 
 ## Native frames
 
 A texture buffer with `outputMedia.memory = FRAME_MEMORY_NATIVE` receives pictures in memory the GPU imports without a copy (see [docs/maf.md](../../docs/maf.md#native-frame-buffers)): IOSurface-backed `CVPixelBuffer`s on Apple platforms. The pipeline keeps a reference to the picture of each frame until the frame is written again or the pipeline is destroyed, so the last pictures stay valid when the media ends or the pipeline stops.
 
-The decoded pictures are converted to the stored format in system memory, then copied into the native pictures.
+The pictures of VideoToolbox are handed over as they are when they have the stored format and size, and otherwise converted by VideoToolbox (`VTPixelTransferSession`) into a new `CVPixelBuffer`: they do not go through system memory. Pictures decoded in software, and the formats of a single component (`RED`, `GREEN`, `BLUE`, `RG`, `DEPTH_COMPONENT`), are converted in system memory and copied into the native pictures.
 
 
 ## Tests

@@ -50,7 +50,7 @@ avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp', 'src/Metada
 # platform libraries of the native frames
 platform_deps = []
 if host_machine.system() == 'darwin'
-  platform_deps += dependency('appleframeworks', modules : ['CoreFoundation', 'CoreVideo'])
+  platform_deps += dependency('appleframeworks', modules : ['CoreFoundation', 'CoreVideo', 'VideoToolbox'])
 endif
 
 # hardware video decoders: VideoToolbox on Apple platforms, MediaCodec on Android; the software decoders remain the

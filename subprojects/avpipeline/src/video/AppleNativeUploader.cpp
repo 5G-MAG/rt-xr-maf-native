@@ -21,6 +21,7 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreVideo/CoreVideo.h>
+#include <VideoToolbox/VideoToolbox.h>
 
 using namespace MAF;
 
@@ -71,6 +72,7 @@ namespace
     {
     private:
         CVPixelBufferPoolRef pool_ = nullptr;
+        VTPixelTransferSessionRef transfer_ = nullptr;
         OSType poolFormat_ = 0;
         int poolWidth_ = 0;
         int poolHeight_ = 0;
@@ -108,9 +110,31 @@ namespace
             return true;
         }
 
+        // A new pixel buffer of the pool, or nullptr
+        CVPixelBufferRef NewBuffer(OSType format, int width, int height)
+        {
+            CVPixelBufferRef buffer = nullptr;
+            if (!Pool(format, width, height) || CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool_, &buffer) != kCVReturnSuccess)
+            {
+                return nullptr;
+            }
+            return buffer;
+        }
+
+        static void Hold(CVPixelBufferRef buffer, NativePicture &out)
+        {
+            out.handle = buffer;
+            out.owner = std::shared_ptr<void>(buffer, [](void *b) { CVPixelBufferRelease((CVPixelBufferRef)b); });
+        }
+
     public:
         ~AppleNativeUploader() override
         {
+            if (transfer_)
+            {
+                VTPixelTransferSessionInvalidate(transfer_);
+                CFRelease(transfer_);
+            }
             if (pool_)
             {
                 CVPixelBufferPoolRelease(pool_);
@@ -151,12 +175,12 @@ namespace
         bool Upload(const PicturePlanes &planes, ColorFormat stored, int width, int height, bool fullRange, NativePicture &out) override
         {
             const OSType format = PixelFormat(stored, fullRange);
-            if (format == 0 || !Pool(format, width, height))
+            if (format == 0)
             {
                 return false;
             }
-            CVPixelBufferRef buffer = nullptr;
-            if (CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool_, &buffer) != kCVReturnSuccess || !buffer)
+            CVPixelBufferRef buffer = NewBuffer(format, width, height);
+            if (!buffer)
             {
                 return false;
             }
@@ -178,8 +202,47 @@ namespace
                 }
             }
             CVPixelBufferUnlockBaseAddress(buffer, 0);
-            out.handle = buffer;
-            out.owner = std::shared_ptr<void>(buffer, [](void *b) { CVPixelBufferRelease((CVPixelBufferRef)b); });
+            Hold(buffer, out);
+            return true;
+        }
+
+        bool Convert(void *picture, ColorFormat stored, int width, int height, bool fullRange, NativePicture &out) override
+        {
+            // the formats of single components are taken from the RGB picture in system memory
+            if (stored != BGRA && stored < G8_B8_R8_3PLANE_420_UNORM)
+            {
+                return false;
+            }
+            CVPixelBufferRef source = (CVPixelBufferRef)picture;
+            const OSType format = PixelFormat(stored, fullRange);
+            if (format == 0)
+            {
+                return false;
+            }
+            if (CVPixelBufferGetPixelFormatType(source) == format && CVPixelBufferGetWidth(source) == (size_t)width &&
+                CVPixelBufferGetHeight(source) == (size_t)height && CVPixelBufferGetIOSurface(source) != nullptr)
+            {
+                // the decoded picture is the stored picture
+                CVPixelBufferRetain(source);
+                Hold(source, out);
+                return true;
+            }
+            if (!transfer_ && VTPixelTransferSessionCreate(kCFAllocatorDefault, &transfer_) != noErr)
+            {
+                transfer_ = nullptr;
+                return false;
+            }
+            CVPixelBufferRef buffer = NewBuffer(format, width, height);
+            if (!buffer)
+            {
+                return false;
+            }
+            if (VTPixelTransferSessionTransferImage(transfer_, source, buffer) != noErr)
+            {
+                CVPixelBufferRelease(buffer);
+                return false;
+            }
+            Hold(buffer, out);
             return true;
         }
     };

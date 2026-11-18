@@ -49,6 +49,19 @@ public:
     // Copies a picture laid out in the stored format into a new native picture. fullRange: YCbCr samples use the
     // full range of their values (otherwise the video range). Returns false on failure.
     virtual bool Upload(const PicturePlanes &planes, MAF::ColorFormat stored, int width, int height, bool fullRange, NativePicture &out) = 0;
+    // Stores a native picture of a hardware decoder (see VideoDecodeBackend::HardwarePicture) in the stored format and
+    // size: the picture itself when it already is, otherwise a copy converted by the platform. Returns false when the
+    // platform can not; the picture then goes through system memory.
+    virtual bool Convert(void *picture, MAF::ColorFormat stored, int width, int height, bool fullRange, NativePicture &out)
+    {
+        (void)picture;
+        (void)stored;
+        (void)width;
+        (void)height;
+        (void)fullRange;
+        (void)out;
+        return false;
+    }
 };
 
 // The uploader of the platform, or nullptr when the platform has no native frames

@@ -621,6 +621,138 @@ TEST_CASE("hardware decoding: 10-bit HEVC decoded with VideoToolbox is stored li
 
 #endif // __APPLE__
 
+#if defined(__APPLE__) && defined(MAF_NATIVE_FRAMES)
+
+// Plays the clip into a CPU buffer with the software decoder, then into a native buffer with VideoToolbox, the
+// pictures handed over or converted without going through system memory, and checks that they store the same samples
+void compareNativeHardwareWithCpu(const testmedia::Clip &clip, ColorFormat format, int tolerance)
+{
+    const Layout cpuLayout = layoutOf(format);
+    const Layout nativeLayout = layoutOf(appleStoredFormat(format));
+    const int bps = cpuLayout.depth > 8 ? 2 : 1;
+    std::map<int, std::vector<uint8_t>> cpu;
+    setenv("AVPIPELINE_HWDECODE", "0", 1);
+    play(clip, format, clip.width, clip.height, [&](Frame *f, int k) {
+        cpu[k].assign(f->data, f->data + f->length);
+    });
+    // the 3-plane layout of the CPU buffer, as the 2-plane layout of the native picture
+    auto toNativeLayout = [&](const std::vector<uint8_t> &planes) {
+        if (cpuLayout.twoPlanes == nativeLayout.twoPlanes)
+            return planes;
+        const int cw = (clip.width + cpuLayout.sx - 1) / cpuLayout.sx, ch = (clip.height + cpuLayout.sy - 1) / cpuLayout.sy;
+        const size_t luma = (size_t)clip.width * clip.height * bps, chroma = (size_t)cw * ch * bps;
+        std::vector<uint8_t> out(planes.begin(), planes.begin() + luma);
+        for (size_t i = 0; i < chroma; i += bps)
+            for (int c = 0; c < 2; c++)
+                out.insert(out.end(), planes.begin() + luma + c * chroma + i, planes.begin() + luma + c * chroma + i + bps);
+        return out;
+    };
+    int compared = 0;
+    setenv("AVPIPELINE_HWDECODE", "require", 1);
+    play(clip, format, clip.width, clip.height, [&](Frame *f, int k) {
+        CVPixelBufferRef buffer = (CVPixelBufferRef)f->data;
+        CHECK(buffer && CVPixelBufferGetIOSurface(buffer) != nullptr);
+        auto it = cpu.find(k);
+        if (!buffer || it == cpu.end())
+            return;
+        std::vector<uint8_t> native = readPlanes(buffer, nativeLayout);
+        std::vector<uint8_t> expected = toNativeLayout(it->second);
+        CHECK(native.size() == expected.size());
+        if (native.size() != expected.size())
+            return;
+        int worst = 0;
+        for (size_t i = 0; i < native.size(); i += bps)
+        {
+            int a = bps == 2 ? (native[i] | (native[i + 1] << 8)) >> 6 : native[i];
+            int b = bps == 2 ? (expected[i] | (expected[i + 1] << 8)) >> 6 : expected[i];
+            worst = std::max(worst, std::abs(a - b));
+        }
+        if (worst > tolerance)
+            std::fprintf(stderr, "  frame %d: native and CPU pictures differ by up to %d\n", k, worst);
+        CHECK(worst <= tolerance);
+        compared++;
+    }, Memory::NATIVE);
+    unsetenv("AVPIPELINE_HWDECODE");
+    CHECK(compared == clip.frames);
+}
+
+TEST_CASE("native buffer from VideoToolbox: H.264 pictures are handed over or converted without system memory")
+{
+    testmedia::Clip clip{caseFileName("native_h264_videotoolbox"), AV_PIX_FMT_YUV420P, 320, 180, 10, 25};
+    std::string err = testmedia::write(clip, "h264_videotoolbox", 2000000);
+    CHECK(err.empty());
+    if (!err.empty())
+        return;
+    compareNativeHardwareWithCpu(clip, G8_B8R8_2PLANE_420_UNORM, 0);  // the decoded picture itself
+    compareNativeHardwareWithCpu(clip, G8_B8_R8_3PLANE_420_UNORM, 0); // planes rearranged
+    std::filesystem::remove(clip.path);
+}
+
+TEST_CASE("native buffer from VideoToolbox: 10-bit HEVC pictures are handed over")
+{
+    testmedia::Clip clip{caseFileName("native_hevc_main10_videotoolbox"), AV_PIX_FMT_YUV420P10LE, 320, 180, 10, 25, AV_PIX_FMT_P010LE};
+    std::string err = testmedia::write(clip, "hevc_videotoolbox", 2000000);
+    CHECK(err.empty());
+    if (!err.empty())
+        return;
+    compareNativeHardwareWithCpu(clip, G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16, 0);
+    std::filesystem::remove(clip.path);
+}
+
+TEST_CASE("native buffer from VideoToolbox: RGBA pictures are converted without system memory")
+{
+    testmedia::Clip clip{caseFileName("native_rgba_videotoolbox"), AV_PIX_FMT_YUV420P, 320, 180, 5, 25};
+    std::string err = testmedia::write(clip, "h264_videotoolbox", 2000000);
+    CHECK(err.empty());
+    if (!err.empty())
+        return;
+    setenv("AVPIPELINE_HWDECODE", "require", 1);
+    int frames = play(clip, RGBA, 320, 180, [&](Frame *f, int) {
+        CVPixelBufferRef buffer = (CVPixelBufferRef)f->data;
+        CHECK(buffer && CVPixelBufferGetPixelFormatType(buffer) == kCVPixelFormatType_32BGRA && CVPixelBufferGetIOSurface(buffer) != nullptr);
+    }, Memory::NATIVE);
+    unsetenv("AVPIPELINE_HWDECODE");
+    CHECK(frames == clip.frames);
+    std::filesystem::remove(clip.path);
+}
+
+TEST_CASE("native buffer from VideoToolbox: require fails for a picture that goes through system memory")
+{
+    testmedia::Clip clip{caseFileName("native_red_videotoolbox"), AV_PIX_FMT_YUV420P, 320, 180, 5, 25};
+    std::string err = testmedia::write(clip, "h264_videotoolbox", 2000000);
+    CHECK(err.empty());
+    if (!err.empty())
+        return;
+    BufferHandler handler;
+    handler.allocateNative(4);
+    BufferInfo info{};
+    info.handler = &handler;
+    info.componentType = UNSIGNED_BYTE;
+    info.type = SCALAR;
+    info.outputMedia.width = 320;
+    info.outputMedia.height = 180;
+    info.outputMedia.format = RED; // one component, taken from the RGB picture in system memory
+    info.outputMedia.memory = FRAME_MEMORY_NATIVE;
+    AlternativeLocation alt;
+    alt.uri = clip.path;
+    MediaInfo media;
+    media.alternatives.push_back(alt);
+    setenv("AVPIPELINE_HWDECODE", "require", 1);
+    AvMediaPipeline pipeline;
+    pipeline.initialize(media, {info});
+    CHECK(pipeline.state() == READY);
+    pipeline.startFetching(TimeInfo{0.0, 0.0, true, false}, ViewInfo{});
+    auto until = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (pipeline.state() != ERROR && std::chrono::steady_clock::now() < until)
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    unsetenv("AVPIPELINE_HWDECODE");
+    CHECK(pipeline.state() == ERROR);
+    CHECK(handler.readFrame() == nullptr);
+    std::filesystem::remove(clip.path);
+}
+
+#endif // __APPLE__ && MAF_NATIVE_FRAMES
+
 #ifdef __ANDROID__
 
 TEST_CASE("hardware decoding: MPEG-4 decoded with MediaCodec is stored like the software decoder stores it")
