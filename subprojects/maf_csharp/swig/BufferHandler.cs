@@ -74,6 +74,10 @@ public class BufferHandler : global::System.IDisposable {
     mafPINVOKE.BufferHandler_allocate__SWIG_1(swigCPtr, capacity, maxFrameSize);
   }
 
+  public void allocateNative(byte capacity) {
+    mafPINVOKE.BufferHandler_allocateNative(swigCPtr, capacity);
+  }
+
   public byte capacity() {
     byte ret = mafPINVOKE.BufferHandler_capacity(swigCPtr);
     return ret;
@@ -135,6 +139,15 @@ public class BufferHandler : global::System.IDisposable {
   public Frame readFrame(double time_s) {
     global::System.IntPtr cPtr = mafPINVOKE.BufferHandler_readFrame__SWIG_2(swigCPtr, time_s);
     Frame ret = (cPtr == global::System.IntPtr.Zero) ? null : new Frame(cPtr, false);
+    return ret;
+  }
+
+  public void releaseFrame(byte index) {
+    mafPINVOKE.BufferHandler_releaseFrame(swigCPtr, index);
+  }
+
+  public bool isWritable(int idx) {
+    bool ret = mafPINVOKE.BufferHandler_isWritable(swigCPtr, idx);
     return ret;
   }
 

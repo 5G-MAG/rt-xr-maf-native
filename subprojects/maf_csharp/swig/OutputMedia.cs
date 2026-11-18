@@ -97,6 +97,16 @@ public class OutputMedia : global::System.IDisposable {
     } 
   }
 
+  public FrameMemory memory {
+    set {
+      mafPINVOKE.OutputMedia_memory_set(swigCPtr, (int)value);
+    } 
+    get {
+      FrameMemory ret = (FrameMemory)mafPINVOKE.OutputMedia_memory_get(swigCPtr);
+      return ret;
+    } 
+  }
+
   public OutputMedia() : this(mafPINVOKE.new_OutputMedia(), true) {
   }
 

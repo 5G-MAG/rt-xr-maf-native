@@ -3352,6 +3352,16 @@ SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferHandler_allocate__SWIG_1(void * jar
 }
 
 
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferHandler_allocateNative(void * jarg1, unsigned char jarg2) {
+  MAF::BufferHandler *arg1 = (MAF::BufferHandler *) 0 ;
+  uint8_t arg2 ;
+  
+  arg1 = (MAF::BufferHandler *)jarg1; 
+  arg2 = (uint8_t)jarg2; 
+  (arg1)->allocateNative(arg2);
+}
+
+
 SWIGEXPORT unsigned char SWIGSTDCALL CSharp_maf_BufferHandler_capacity(void * jarg1) {
   unsigned char jresult ;
   MAF::BufferHandler *arg1 = (MAF::BufferHandler *) 0 ;
@@ -3500,6 +3510,30 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_maf_BufferHandler_readFrame__SWIG_2(void * 
 }
 
 
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferHandler_releaseFrame(void * jarg1, unsigned char jarg2) {
+  MAF::BufferHandler *arg1 = (MAF::BufferHandler *) 0 ;
+  uint8_t arg2 ;
+  
+  arg1 = (MAF::BufferHandler *)jarg1; 
+  arg2 = (uint8_t)jarg2; 
+  (arg1)->releaseFrame(arg2);
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_BufferHandler_isWritable(void * jarg1, int jarg2) {
+  unsigned int jresult ;
+  MAF::BufferHandler *arg1 = (MAF::BufferHandler *) 0 ;
+  int arg2 ;
+  bool result;
+  
+  arg1 = (MAF::BufferHandler *)jarg1; 
+  arg2 = (int)jarg2; 
+  result = (bool)(arg1)->isWritable(arg2);
+  jresult = result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_maf_BufferHandler_setOnFrameWriteCallback(void * jarg1, void * jarg2) {
   MAF::BufferHandler *arg1 = (MAF::BufferHandler *) 0 ;
   MAF::Callback arg2 = (MAF::Callback) 0 ;
@@ -3604,6 +3638,28 @@ SWIGEXPORT unsigned int SWIGSTDCALL CSharp_maf_OutputMedia_sampleRate_get(void *
   arg1 = (MAF::OutputMedia *)jarg1; 
   result = (uint32_t) ((arg1)->sampleRate);
   jresult = (unsigned int)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_maf_OutputMedia_memory_set(void * jarg1, int jarg2) {
+  MAF::OutputMedia *arg1 = (MAF::OutputMedia *) 0 ;
+  MAF::FrameMemory arg2 ;
+  
+  arg1 = (MAF::OutputMedia *)jarg1; 
+  arg2 = (MAF::FrameMemory)jarg2; 
+  if (arg1) (arg1)->memory = arg2;
+}
+
+
+SWIGEXPORT int SWIGSTDCALL CSharp_maf_OutputMedia_memory_get(void * jarg1) {
+  int jresult ;
+  MAF::OutputMedia *arg1 = (MAF::OutputMedia *) 0 ;
+  MAF::FrameMemory result;
+  
+  arg1 = (MAF::OutputMedia *)jarg1; 
+  result = (MAF::FrameMemory) ((arg1)->memory);
+  jresult = (int)result; 
   return jresult;
 }
 
