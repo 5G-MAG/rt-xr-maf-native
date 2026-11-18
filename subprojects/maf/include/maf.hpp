@@ -215,12 +215,24 @@ enum ColorFormat {
     BGR,
     BGRA,
     DEPTH_COMPONENT,
-    // MPEG_texture_video YCbCr formats (Vulkan VkFormat), not in the IDL of clause 6.2. The planes are stored one after
-    // the other without padding, the chroma planes at half the width and height of the picture (rounded up):
-    // the Y plane, then the Cb plane, then the Cr plane
+    // MPEG_texture_video YCbCr formats (Vulkan 1.3, Table 76), not in the IDL of clause 6.2. The planes are stored one
+    // after the other without padding. 3PLANE: the Y plane, then the Cb plane, then the Cr plane. 2PLANE: the Y plane,
+    // then one plane of interleaved Cb and Cr samples. The chroma planes are at half the width and height of the picture
+    // for 420, half the width for 422, and full size for 444 (halves rounded up).
+    // 8-bit formats have one byte per sample (accessor componentType UNSIGNED_BYTE). 10-bit formats (G10X6) have one
+    // little-endian 16-bit word per sample holding the value in its 10 most significant bits (UNSIGNED_SHORT).
     G8_B8_R8_3PLANE_420_UNORM,
-    // the Y plane, then one plane of interleaved Cb and Cr samples
-    G8_B8R8_2PLANE_420_UNORM
+    G8_B8R8_2PLANE_420_UNORM,
+    G8_B8_R8_3PLANE_422_UNORM,
+    G8_B8R8_2PLANE_422_UNORM,
+    G8_B8_R8_3PLANE_444_UNORM,
+    G8_B8R8_2PLANE_444_UNORM,
+    G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16,
+    G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16,
+    G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16,
+    G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16,
+    G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16,
+    G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16
 };
 
 // IMPLEMENTATION CONVENTION, NOT PART OF ISO/IEC 23090-14: where the frames of a buffer store the picture
