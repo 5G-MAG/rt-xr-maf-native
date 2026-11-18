@@ -1,0 +1,1 @@
+option('unity_plugin_api', type : 'string', value : '', description : 'path to the PluginAPI directory of a Unity installation; empty: the newest Unity editor installed with Unity Hub')

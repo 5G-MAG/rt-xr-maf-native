@@ -32,3 +32,23 @@ A media pipeline implements media fetching and decoding, exposing its functional
 - `meson.build`
 - `meson.options`
 
+
+
+# maf_unity: showing native frames in Unity
+
+`subprojects/maf_unity` is a Unity native rendering plugin that shows the frames of [native frame buffers](./maf.md#native-frame-buffers) in Unity textures without copying their pictures. Its C API is in [`MafUnity.h`](../subprojects/maf_unity/include/MafUnity.h).
+
+For each texture, from the main thread:
+1. `MafUnity_CreateTexture()` once.
+2. When a new frame of a native buffer is presented: `MafUnity_SubmitFrame(texture, handler, frame.index, frame.data)`. It imports the picture and returns its number of planes. A frame shown on several textures is imported once.
+3. Wrap the plane textures (`MafUnity_GetPlaneTexture`, with `MafUnity_GetPlaneFormat`, `MafUnity_GetPlaneWidth` and `MafUnity_GetPlaneHeight`) with `Texture2D.CreateExternalTexture` / `UpdateExternalTexture`, and render with them.
+4. Each frame, after the commands that use the textures: `CommandBuffer.IssuePluginEventAndData(MafUnity_GetRenderEventFunc(), MAFUNITY_EVENT_RELEASE, IntPtr.Zero)`. The frames that no texture shows any more are released to their buffer (`BufferHandler::releaseFrame`) once the GPU has completed the commands recorded before the event.
+5. `MafUnity_DestroyTexture()` when the texture is no longer used.
+
+Frames read from a native buffer and not submitted (frames skipped to catch up with the presentation time) are released by the caller with `releaseFrame`. Before a buffer is freed, call `MafUnity_ForgetBuffer(handler)`.
+
+| Graphics API | Native frames | Plane textures |
+|---|---|---|
+| Metal (macOS, iOS) | `CVPixelBuffer` | `id<MTLTexture>` per plane |
+
+The plugin is built when the PluginAPI headers of a Unity installation are found: by default those of the newest Unity editor installed with Unity Hub, otherwise set with `-Dmaf_unity:unity_plugin_api=<Unity>/PluginAPI`. The headers are not part of this repository, as they are under the Unity Companion License. The top-level `unityplugin` option (`auto`, `enabled`, `disabled`) controls the build.

@@ -15,6 +15,10 @@ if get_option('avpipeline')
     subproject('avpipeline')
 endif
 
+if not get_option('unityplugin').disabled()
+    subproject('maf_unity', required : get_option('unityplugin'))
+endif
+
 if get_option('csharp')
     subproject('maf_csharp')
 endif
