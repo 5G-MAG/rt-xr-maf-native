@@ -26,7 +26,7 @@ In a native buffer:
   | Apple | `CVPixelBufferRef` |
   | Android | `AHardwareBuffer*` |
 
-- `Frame.length` is 0. The width and height of the picture are in the frame (`extraFrameInfoFlags` bit 0, Table 25).
+- `Frame.length` is 0. The width and height of the frame are in the frame (`extraFrameInfoFlags` bit 0, Table 25). The picture may be larger, e.g. a hardware decoder that aligns its picture sizes: the frame is then the top-left `width` x `height` region of the picture.
 - The handle is owned by the writer. A frame returned by `readFrame()` is held until the consumer calls `releaseFrame(index)`, for example once the GPU is done with the picture. The consumer keeps its own reference to the handle if it uses it after that.
 - `free()` does not release the handles.
 - The picture holds the samples of `outputMedia.format`, in a layout of the platform that the handle describes (its pixel format and planes). A format the platform has no layout for is stored in an equivalent one with the same samples:

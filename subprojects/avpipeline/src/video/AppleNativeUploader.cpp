@@ -206,14 +206,14 @@ namespace
             return true;
         }
 
-        bool Convert(void *picture, ColorFormat stored, int width, int height, bool fullRange, NativePicture &out) override
+        bool Convert(const NativePicture &picture, ColorFormat stored, int width, int height, bool fullRange, NativePicture &out) override
         {
             // the formats of single components are taken from the RGB picture in system memory
             if (stored != BGRA && stored < G8_B8_R8_3PLANE_420_UNORM)
             {
                 return false;
             }
-            CVPixelBufferRef source = (CVPixelBufferRef)picture;
+            CVPixelBufferRef source = (CVPixelBufferRef)picture.handle;
             const OSType format = PixelFormat(stored, fullRange);
             if (format == 0)
             {
@@ -223,8 +223,7 @@ namespace
                 CVPixelBufferGetHeight(source) == (size_t)height && CVPixelBufferGetIOSurface(source) != nullptr)
             {
                 // the decoded picture is the stored picture
-                CVPixelBufferRetain(source);
-                Hold(source, out);
+                out = picture;
                 return true;
             }
             if (!transfer_ && VTPixelTransferSessionCreate(kCFAllocatorDefault, &transfer_) != noErr)

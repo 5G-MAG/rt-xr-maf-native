@@ -18,14 +18,7 @@
 #include <memory>
 
 #include <maf.hpp>
-
-// A picture in memory the GPU imports, the Frame.data of a native buffer: a CVPixelBufferRef on Apple platforms, an
-// AHardwareBuffer* on Android. owner keeps the picture alive: the picture is released with the last copy of owner.
-struct NativePicture
-{
-    void *handle = nullptr;
-    std::shared_ptr<void> owner;
-};
+#include <VideoDecodeBackend.hpp>
 
 // The planes of a picture in system memory
 struct PicturePlanes
@@ -50,9 +43,10 @@ public:
     // full range of their values (otherwise the video range). Returns false on failure.
     virtual bool Upload(const PicturePlanes &planes, MAF::ColorFormat stored, int width, int height, bool fullRange, NativePicture &out) = 0;
     // Stores a native picture of a hardware decoder (see VideoDecodeBackend::HardwarePicture) in the stored format and
-    // size: the picture itself when it already is, otherwise a copy converted by the platform. Returns false when the
-    // platform can not; the picture then goes through system memory.
-    virtual bool Convert(void *picture, MAF::ColorFormat stored, int width, int height, bool fullRange, NativePicture &out)
+    // size: the picture itself when it already is (a picture larger than width x height whose top-left region is the
+    // frame qualifies), otherwise a copy converted by the platform. Returns false when the platform can not; the
+    // picture then goes through system memory.
+    virtual bool Convert(const NativePicture &picture, MAF::ColorFormat stored, int width, int height, bool fullRange, NativePicture &out)
     {
         (void)picture;
         (void)stored;

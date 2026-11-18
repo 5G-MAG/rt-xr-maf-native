@@ -712,8 +712,8 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                         // native frame of a hardware decoder: the platform hands the picture over, or converts it, without
                         // going through system memory
                         NativePicture picture;
-                        void *hwPicture = native ? backend_->HardwarePicture(avFrame) : nullptr;
-                        const bool direct = hwPicture != nullptr && uploader->Convert(hwPicture, storedFormat, outW, outH, isFullRange(avFrame), picture);
+                        const NativePicture hwPicture = native ? backend_->HardwarePicture(avFrame) : NativePicture();
+                        const bool direct = hwPicture.handle != nullptr && uploader->Convert(hwPicture, storedFormat, outW, outH, isFullRange(avFrame), picture);
                         if (native && !direct && hardwareRequired)
                         {
                             throw "the picture of a native frame went through system memory (AVPIPELINE_HWDECODE=require)";

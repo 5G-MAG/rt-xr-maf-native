@@ -61,7 +61,7 @@ A texture buffer with `outputMedia.memory = FRAME_MEMORY_NATIVE` receives pictur
 
 The pictures of VideoToolbox are handed over as they are when they have the stored format and size, and otherwise converted by VideoToolbox (`VTPixelTransferSession`) into a new `CVPixelBuffer`: they do not go through system memory. Pictures decoded in software, and the formats of a single component (`RED`, `GREEN`, `BLUE`, `RG`, `DEPTH_COMPONENT`), are converted in system memory and copied into the native pictures.
 
-On Android, the pictures are converted in system memory and copied into `AHardwareBuffer`s, through `AHardwareBuffer_lockPlanes`, which gives the plane layout of the device.
+On Android, MediaCodec renders the pictures to the surface of an `AImageReader` when they can be handed over as they are (4:2:0 YCbCr at the bit depth of the stream, no reduction to the maximum texture size): the `AHardwareBuffer` of each image is the native picture, possibly larger than the frame (aligned sizes). Otherwise the pictures are converted in system memory and copied into `AHardwareBuffer`s, through `AHardwareBuffer_lockPlanes`, which gives the plane layout of the device.
 
 
 ## Tests

@@ -919,6 +919,35 @@ TEST_CASE("hardware decoding: MPEG-4 decoded with MediaCodec is stored like the 
     std::filesystem::remove(clip.path);
 }
 
+#ifdef MAF_NATIVE_FRAMES
+
+TEST_CASE("native buffer from MediaCodec: pictures are rendered to a surface and handed over")
+{
+    testmedia::Clip clip{caseFileName("native_mpeg4_mediacodec"), AV_PIX_FMT_YUV420P, 320, 180, 10, 25};
+    std::string err = testmedia::write(clip, "mpeg4", 4000000, 1);
+    CHECK(err.empty());
+    if (!err.empty())
+        return;
+    // the pictures do not go through system memory: each frame is an image of the surface
+    setenv("AVPIPELINE_HWDECODE", "require", 1);
+    int frames = play(clip, G8_B8R8_2PLANE_420_UNORM, 320, 180, [&](Frame *f, int) {
+        AHardwareBuffer *buffer = (AHardwareBuffer *)f->data;
+        CHECK(buffer != nullptr && f->length == 0);
+        if (!buffer)
+            return;
+        AHardwareBuffer_Desc desc = {};
+        AHardwareBuffer_describe(buffer, &desc);
+        // the picture may be larger than the frame (aligned sizes): the frame is its top-left region
+        CHECK(desc.width >= f->width && desc.height >= f->height);
+        CHECK(f->width == 320 && f->height == 180);
+    }, Memory::NATIVE);
+    unsetenv("AVPIPELINE_HWDECODE");
+    CHECK(frames == clip.frames);
+    std::filesystem::remove(clip.path);
+}
+
+#endif // MAF_NATIVE_FRAMES
+
 #endif // __ANDROID__
 
 #endif

@@ -146,6 +146,30 @@ namespace
             return false;
         }
 
+        bool Convert(const NativePicture &picture, ColorFormat stored, int width, int height, bool fullRange, NativePicture &out) override
+        {
+            (void)fullRange;
+            // the pictures of MediaCodec are handed over: 4:2:0 YCbCr, possibly larger than the frame (aligned sizes)
+            if (stored < G8_B8_R8_3PLANE_420_UNORM || BufferFormat(stored) == 0)
+            {
+                return false;
+            }
+            AHardwareBuffer_Desc desc = {};
+            AHardwareBuffer_describe((AHardwareBuffer *)picture.handle, &desc);
+            if (desc.width < (uint32_t)width || desc.height < (uint32_t)height)
+            {
+                return false;
+            }
+            // a format of the device (e.g. IMPLEMENTATION_DEFINED) has the depth of the stream, which MediaCodec chose
+            if ((desc.format == AHARDWAREBUFFER_FORMAT_YCbCr_P010 && !IsTenBits(stored)) ||
+                (desc.format == AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420 && IsTenBits(stored)))
+            {
+                return false;
+            }
+            out = picture;
+            return true;
+        }
+
     private:
         static bool WritePacked(AHardwareBuffer *buffer, const PicturePlanes &planes) __attribute__((availability(android, introduced = 29)))
         {

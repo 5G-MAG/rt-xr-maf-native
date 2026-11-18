@@ -29,6 +29,14 @@ extern "C"
 
 #include <maf.hpp>
 
+// A picture in memory the GPU imports, the Frame.data of a native buffer: a CVPixelBufferRef on Apple platforms, an
+// AHardwareBuffer* on Android. owner keeps the picture alive: the picture is released with the last copy of owner.
+struct NativePicture
+{
+    void *handle = nullptr;
+    std::shared_ptr<void> owner;
+};
+
 // A video decoder of a stream: the libav codec context VideoDecoder feeds and reads, and the operations that depend on
 // where the decoded pictures are (system memory, or the memory of a hardware decoder).
 class VideoDecodeBackend
@@ -45,17 +53,17 @@ public:
         (void)sw;
         return decoded;
     }
-    // The native picture of the platform a hardware decoder decoded into (a CVPixelBufferRef on Apple platforms), or
-    // nullptr when the picture is in system memory
-    virtual void *HardwarePicture(AVFrame *decoded)
+    // The native picture of the platform a hardware decoder decoded into, with what keeps it alive, or no picture
+    // (handle nullptr) when the picture is in system memory
+    virtual NativePicture HardwarePicture(AVFrame *decoded)
     {
         (void)decoded;
-        return nullptr;
+        return NativePicture();
     }
 };
 
 // Opens the decoder of a video stream with the first backend of the platform that can decode it, the software
-// decoder last. Throws when no backend can decode the stream.
+// decoder last, for the buffer the pictures are stored in. Throws when no backend can decode the stream.
 std::unique_ptr<VideoDecodeBackend> CreateVideoBackend(AVStream *stream, const MAF::BufferInfo &info);
 
 // Whether the environment variable AVPIPELINE_HWDECODE is "require": the hardware decoders must decode the streams,

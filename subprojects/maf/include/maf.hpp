@@ -135,7 +135,8 @@ public:
     // IMPLEMENTATION CONVENTION, NOT PART OF ISO/IEC 23090-14: allocates a native frame buffer, for a texture whose
     // BufferInfo.outputMedia.memory is FRAME_MEMORY_NATIVE. Frame.data of each frame written to it is a handle to the
     // picture, owned by the writer: a CVPixelBufferRef on Apple platforms, an AHardwareBuffer* on Android; Frame.length
-    // is 0. Each frame read is held until releaseFrame() is called with its index. free() does not release the handles.
+    // is 0. The picture may be larger than Frame.width x height: the frame is its top-left region. Each frame read is
+    // held until releaseFrame() is called with its index. free() does not release the handles.
     // Throws when the library is built without native frame buffers (MAF_NATIVE_FRAMES is not defined).
     void allocateNative(uint8_t capacity);
     uint8_t capacity();

@@ -18,6 +18,10 @@ extern "C"
 #include <libavutil/pixdesc.h>
 }
 
+#ifdef __APPLE__
+#include <CoreVideo/CoreVideo.h>
+#endif
+
 namespace
 {
 
@@ -94,17 +98,20 @@ namespace
             return ctx_;
         }
 
-        void *HardwarePicture(AVFrame *decoded) override
+        NativePicture HardwarePicture(AVFrame *decoded) override
         {
+            NativePicture picture;
 #ifdef __APPLE__
             // VideoToolbox: data[3] is the CVPixelBufferRef of the picture
-            if (type_ == AV_HWDEVICE_TYPE_VIDEOTOOLBOX && decoded->format == hwFormat_)
+            if (type_ == AV_HWDEVICE_TYPE_VIDEOTOOLBOX && decoded->format == hwFormat_ && decoded->data[3])
             {
-                return decoded->data[3];
+                CVPixelBufferRef buffer = CVPixelBufferRetain((CVPixelBufferRef)decoded->data[3]);
+                picture.handle = buffer;
+                picture.owner = std::shared_ptr<void>(buffer, [](void *b) { CVPixelBufferRelease((CVPixelBufferRef)b); });
             }
 #endif
             (void)decoded;
-            return nullptr;
+            return picture;
         }
 
         AVFrame *ToSoftware(AVFrame *decoded, AVFrame *sw) override

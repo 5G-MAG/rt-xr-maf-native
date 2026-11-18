@@ -22,7 +22,11 @@
 std::unique_ptr<VideoDecodeBackend> OpenHwAccelBackend(AVStream *stream, AVHWDeviceType type, bool required);
 
 #ifdef __ANDROID__
-// A MediaCodec decoder of the platform, through the NDK API. Returns nullptr when no MediaCodec decoder supports the
-// stream.
-std::unique_ptr<VideoDecodeBackend> OpenMediaCodecBackend(AVStream *stream);
+// The number of images of the surface a MediaCodec decoder renders the pictures of the stream to, when they can be
+// handed over as they are to the native frame buffer of info; 0 when the pictures are output in system memory.
+int MediaCodecSurfaceImages(AVStream *stream, const MAF::BufferInfo &info);
+
+// A MediaCodec decoder of the platform, through the NDK API, rendering to a surface of surfaceImages images (or output
+// in system memory when 0). Returns nullptr when no MediaCodec decoder supports the stream.
+std::unique_ptr<VideoDecodeBackend> OpenMediaCodecBackend(AVStream *stream, int surfaceImages);
 #endif
