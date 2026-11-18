@@ -232,9 +232,41 @@ namespace
     {
         AVPixelFormat swsFormat;  // pixel format produced by the converter
         int swsBytesPerPixel;
-        int bytesPerPixel;        // bytes per pixel stored in the buffer frame
+        int bytesPerPixel;        // bytes per pixel stored in the buffer frame (packed formats)
         ChannelExtract extract;
+        // YCbCr formats (extract == PLANAR)
+        int sx = 1;               // horizontal and vertical chroma subsampling factors
+        int sy = 1;
+        int bytesPerSample = 1;
+        bool twoPlanes = false;   // Y plane, then interleaved CbCr; otherwise Y, Cb and Cr planes
+        AVPixelFormat threePlanes = AV_PIX_FMT_NONE; // the libav 3-plane format with the same sampling and depth
     };
+
+    VideoOutputFormat planarFormat(AVPixelFormat sws, AVPixelFormat threePlanes, int sx, int sy, int bytesPerSample)
+    {
+        VideoOutputFormat f = {sws, 0, 0, ChannelExtract::PLANAR};
+        f.sx = sx;
+        f.sy = sy;
+        f.bytesPerSample = bytesPerSample;
+        f.twoPlanes = sws != threePlanes;
+        f.threePlanes = threePlanes;
+        return f;
+    }
+
+    // Left shift of the samples of a libav planar format when stored: the G10X6 formats hold the value in the 10 most
+    // significant bits of each sample, the 3-plane 10-bit formats of libav in the least significant bits
+    int sampleShift(int format)
+    {
+        switch (format)
+        {
+        case AV_PIX_FMT_YUV420P10LE:
+        case AV_PIX_FMT_YUV422P10LE:
+        case AV_PIX_FMT_YUV444P10LE:
+            return 6;
+        default:
+            return 0;
+        }
+    }
 
     VideoOutputFormat getVideoOutputFormat(ColorFormat format)
     {
@@ -257,15 +289,45 @@ namespace
         case ColorFormat::DEPTH_COMPONENT:
             // a single component taken from the luma of the decoded picture
             return {AV_PIX_FMT_GRAY8, 1, 1, ChannelExtract::NONE};
-        // YCbCr 4:2:0: the decoded samples are stored as they are when the decoder outputs this layout (see isStoredLayout),
+        // YCbCr: the decoded samples are stored as they are when the decoder outputs this layout (see isStoredLayout),
         // the converter only produces it from other layouts; the conversion to RGB is left to the renderer (MPEG_sampler_YCbCr)
         case ColorFormat::G8_B8_R8_3PLANE_420_UNORM:
-            return {AV_PIX_FMT_YUV420P, 0, 0, ChannelExtract::PLANAR};
+            return planarFormat(AV_PIX_FMT_YUV420P, AV_PIX_FMT_YUV420P, 2, 2, 1);
         case ColorFormat::G8_B8R8_2PLANE_420_UNORM:
-            return {AV_PIX_FMT_NV12, 0, 0, ChannelExtract::PLANAR};
+            return planarFormat(AV_PIX_FMT_NV12, AV_PIX_FMT_YUV420P, 2, 2, 1);
+        case ColorFormat::G8_B8_R8_3PLANE_422_UNORM:
+            return planarFormat(AV_PIX_FMT_YUV422P, AV_PIX_FMT_YUV422P, 2, 1, 1);
+        case ColorFormat::G8_B8R8_2PLANE_422_UNORM:
+            return planarFormat(AV_PIX_FMT_NV16, AV_PIX_FMT_YUV422P, 2, 1, 1);
+        case ColorFormat::G8_B8_R8_3PLANE_444_UNORM:
+            return planarFormat(AV_PIX_FMT_YUV444P, AV_PIX_FMT_YUV444P, 1, 1, 1);
+        case ColorFormat::G8_B8R8_2PLANE_444_UNORM:
+            return planarFormat(AV_PIX_FMT_NV24, AV_PIX_FMT_YUV444P, 1, 1, 1);
+        case ColorFormat::G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
+            return planarFormat(AV_PIX_FMT_YUV420P10LE, AV_PIX_FMT_YUV420P10LE, 2, 2, 2);
+        case ColorFormat::G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
+            return planarFormat(AV_PIX_FMT_P010LE, AV_PIX_FMT_YUV420P10LE, 2, 2, 2);
+        case ColorFormat::G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16:
+            return planarFormat(AV_PIX_FMT_YUV422P10LE, AV_PIX_FMT_YUV422P10LE, 2, 1, 2);
+        case ColorFormat::G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16:
+            return planarFormat(AV_PIX_FMT_P210LE, AV_PIX_FMT_YUV422P10LE, 2, 1, 2);
+        case ColorFormat::G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16:
+            return planarFormat(AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_YUV444P10LE, 1, 1, 2);
+        case ColorFormat::G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16:
+            return planarFormat(AV_PIX_FMT_P410LE, AV_PIX_FMT_YUV444P10LE, 1, 1, 2);
         default:
             return {AV_PIX_FMT_RGB24, 3, 3, ChannelExtract::NONE};
         }
+    }
+
+    int chromaWidth(const VideoOutputFormat &fmt, int w)
+    {
+        return (w + fmt.sx - 1) / fmt.sx;
+    }
+
+    int chromaHeight(const VideoOutputFormat &fmt, int h)
+    {
+        return (h + fmt.sy - 1) / fmt.sy;
     }
 
     // Bytes stored in a buffer frame for a picture of the given size
@@ -273,26 +335,59 @@ namespace
     {
         if (fmt.extract == ChannelExtract::PLANAR)
         {
-            // a luma plane, and two chroma planes at half the width and height (rounded up)
-            return (size_t)w * (size_t)h + 2 * (size_t)((w + 1) / 2) * (size_t)((h + 1) / 2);
+            // a luma plane, and two chroma planes (or one plane of chroma pairs)
+            size_t samples = (size_t)w * (size_t)h + 2 * (size_t)chromaWidth(fmt, w) * (size_t)chromaHeight(fmt, h);
+            return samples * (size_t)fmt.bytesPerSample;
         }
         return (size_t)w * (size_t)h * (size_t)fmt.bytesPerPixel;
+    }
+
+    // Average bytes per pixel stored for the format
+    double storedBytesPerPixel(const VideoOutputFormat &fmt)
+    {
+        if (fmt.extract == ChannelExtract::PLANAR)
+        {
+            return fmt.bytesPerSample * (1.0 + 2.0 / (fmt.sx * fmt.sy));
+        }
+        return (double)fmt.bytesPerPixel;
     }
 
     // Whether a decoded picture has the planes of a stored YCbCr format, so that its samples are stored as decoded
     bool isStoredLayout(int frameFormat, AVPixelFormat stored)
     {
-        if (stored == AV_PIX_FMT_YUV420P)
+        // the yuvj formats only differ by their range, which MPEG_sampler_YCbCr gives
+        switch (stored)
         {
-            // yuvj420p only differs by its range, which MPEG_sampler_YCbCr gives
+        case AV_PIX_FMT_YUV420P:
             return frameFormat == AV_PIX_FMT_YUV420P || frameFormat == AV_PIX_FMT_YUVJ420P;
+        case AV_PIX_FMT_YUV422P:
+            return frameFormat == AV_PIX_FMT_YUV422P || frameFormat == AV_PIX_FMT_YUVJ422P;
+        case AV_PIX_FMT_YUV444P:
+            return frameFormat == AV_PIX_FMT_YUV444P || frameFormat == AV_PIX_FMT_YUVJ444P;
+        default:
+            return frameFormat == stored;
         }
-        return frameFormat == stored;
     }
 
-    // Copies the rows of a decoded plane without the padding of its lines
-    void copyPlane(uint8_t *dst, const uint8_t *src, int srcStride, int rowBytes, int rows)
+    // Copies the rows of a plane without the padding of its lines, shifting 16-bit samples left by shift bits
+    void copyPlane(uint8_t *dst, const uint8_t *src, int srcStride, int rowBytes, int rows, int shift = 0)
     {
+        if (shift > 0)
+        {
+            for (int y = 0; y < rows; y++)
+            {
+                const uint8_t *s = src + (ptrdiff_t)y * srcStride;
+                uint8_t *d = dst + (size_t)y * (size_t)rowBytes;
+                for (int i = 0; i + 1 < rowBytes; i += 2)
+                {
+                    uint16_t v = (uint16_t)(s[i] | (s[i + 1] << 8));
+                    v = (uint16_t)(v << shift);
+                    d[i] = (uint8_t)(v & 0xFF);
+                    d[i + 1] = (uint8_t)(v >> 8);
+                }
+            }
+            return;
+        }
         if (srcStride == rowBytes)
         {
             memcpy(dst, src, (size_t)rowBytes * (size_t)rows);
@@ -301,6 +396,62 @@ namespace
         for (int y = 0; y < rows; y++)
         {
             memcpy(dst + (size_t)y * (size_t)rowBytes, src + (ptrdiff_t)y * srcStride, (size_t)rowBytes);
+        }
+    }
+
+    // Interleaves the rows of a Cb and a Cr plane into one CbCr plane, shifting the samples left by shift bits
+    void interleavePlanes(uint8_t *dst, const uint8_t *cb, int cbStride, const uint8_t *cr, int crStride, int samples, int rows, int bytesPerSample, int shift)
+    {
+        for (int y = 0; y < rows; y++)
+        {
+            const uint8_t *b = cb + (ptrdiff_t)y * cbStride;
+            const uint8_t *r = cr + (ptrdiff_t)y * crStride;
+            uint8_t *d = dst + (size_t)y * (size_t)samples * 2 * (size_t)bytesPerSample;
+            if (bytesPerSample == 1)
+            {
+                for (int x = 0; x < samples; x++)
+                {
+                    d[2 * x] = b[x];
+                    d[2 * x + 1] = r[x];
+                }
+                continue;
+            }
+            for (int x = 0; x < samples; x++)
+            {
+                uint16_t vb = (uint16_t)((b[2 * x] | (b[2 * x + 1] << 8)) << shift);
+                uint16_t vr = (uint16_t)((r[2 * x] | (r[2 * x + 1] << 8)) << shift);
+                d[4 * x] = (uint8_t)(vb & 0xFF);
+                d[4 * x + 1] = (uint8_t)(vb >> 8);
+                d[4 * x + 2] = (uint8_t)(vr & 0xFF);
+                d[4 * x + 3] = (uint8_t)(vr >> 8);
+            }
+        }
+    }
+
+    // Stores the planes of a picture into a buffer frame, in the layout of the YCbCr format. The picture is in the
+    // format of the converter (fmt.swsFormat), or in the 3-plane format with the same sampling (fmt.threePlanes).
+    void storePlanes(uint8_t *dst, const uint8_t *const src[], const int srcStride[], int srcFormat, const VideoOutputFormat &fmt, int w, int h)
+    {
+        const int cw = chromaWidth(fmt, w);
+        const int ch = chromaHeight(fmt, h);
+        const int bps = fmt.bytesPerSample;
+        const int shift = sampleShift(srcFormat);
+        const size_t lumaBytes = (size_t)w * (size_t)h * (size_t)bps;
+        const bool srcTwoPlanes = srcFormat == fmt.swsFormat && fmt.twoPlanes;
+        copyPlane(dst, src[0], srcStride[0], w * bps, h, shift);
+        if (srcTwoPlanes)
+        {
+            copyPlane(dst + lumaBytes, src[1], srcStride[1], 2 * cw * bps, ch, shift);
+        }
+        else if (fmt.twoPlanes)
+        {
+            interleavePlanes(dst + lumaBytes, src[1], srcStride[1], src[2], srcStride[2], cw, ch, bps, shift);
+        }
+        else
+        {
+            const size_t chromaBytes = (size_t)cw * (size_t)ch * (size_t)bps;
+            copyPlane(dst + lumaBytes, src[1], srcStride[1], cw * bps, ch, shift);
+            copyPlane(dst + lumaBytes + chromaBytes, src[2], srcStride[2], cw * bps, ch, shift);
         }
     }
 
@@ -414,9 +565,11 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
 
     try
     {
-        if (info.componentType != ComponentType::UNSIGNED_BYTE)
+        // samples of 8 bits are stored as bytes, of 10 bits as 16-bit words (G10X6 formats)
+        const ComponentType requiredComponent = (outFmt.extract == ChannelExtract::PLANAR && outFmt.bytesPerSample == 2) ? ComponentType::UNSIGNED_SHORT : ComponentType::UNSIGNED_BYTE;
+        if (info.componentType != requiredComponent)
         {
-            throw "video buffers require an accessor with unsigned byte components";
+            throw "the accessor component type does not match the texture format (unsigned byte, or unsigned short for 10-bit formats)";
         }
 
         // layout of a buffer frame: the timed accessor information header when requested, then the picture
@@ -508,7 +661,7 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                         int outW = srcW;
                         int outH = srcH;
                         const bool planar = outFmt.extract == ChannelExtract::PLANAR;
-                        fitPictureSize(srcW, srcH, info.outputMedia.width, info.outputMedia.height, dataCapacity, planar ? 1.5 : (double)outFmt.bytesPerPixel, outW, outH);
+                        fitPictureSize(srcW, srcH, info.outputMedia.width, info.outputMedia.height, dataCapacity, storedBytesPerPixel(outFmt), outW, outH);
                         // the chroma planes are rounded up: an odd size may still exceed the buffer frame
                         while (outH > 1 && pictureBytes(outFmt, outW, outH) > dataCapacity)
                         {
@@ -524,21 +677,12 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                         // AHardwareBuffer, dmabuf) that the renderer imports as a texture, and released back to the decoder once consumed.
                         // This extends the MAF buffer contract: decoding straight into the buffer frame with get_buffer2 does not fit
                         // (stride/height alignment, decode vs presentation order, reference frames, hardware decoders)
-                        const bool asDecoded = planar && outW == srcW && outH == srcH && isStoredLayout(avFrame->format, outFmt.swsFormat);
+                        const bool asDecoded = planar && outW == srcW && outH == srcH && (isStoredLayout(avFrame->format, outFmt.swsFormat) || isStoredLayout(avFrame->format, outFmt.threePlanes));
                         if (asDecoded)
                         {
-                            const int chromaW = (outW + 1) / 2;
-                            const int chromaH = (outH + 1) / 2;
-                            copyPlane(pData, avFrame->data[0], avFrame->linesize[0], outW, outH);
-                            if (outFmt.swsFormat == AV_PIX_FMT_NV12)
-                            {
-                                copyPlane(pData + pixels, avFrame->data[1], avFrame->linesize[1], 2 * chromaW, chromaH);
-                            }
-                            else
-                            {
-                                copyPlane(pData + pixels, avFrame->data[1], avFrame->linesize[1], chromaW, chromaH);
-                                copyPlane(pData + pixels + (size_t)chromaW * (size_t)chromaH, avFrame->data[2], avFrame->linesize[2], chromaW, chromaH);
-                            }
+                            // the 3-plane libav formats of yuvj only differ by their range
+                            const int srcFormat = isStoredLayout(avFrame->format, outFmt.swsFormat) ? outFmt.swsFormat : outFmt.threePlanes;
+                            storePlanes(pData, avFrame->data, avFrame->linesize, srcFormat, outFmt, outW, outH);
                         }
                         else
                         {
@@ -563,23 +707,14 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                             int dstStride[4] = {0, 0, 0, 0};
                             if (planar)
                             {
-                                // the planes are written in the layout of the buffer frame, without padding between rows
-                                converted.resize(dataSize + 64);
-                                const int chromaW = (outW + 1) / 2;
-                                const int chromaH = (outH + 1) / 2;
-                                dstPlanes[0] = converted.data();
-                                dstPlanes[1] = converted.data() + pixels;
-                                dstStride[0] = outW;
-                                if (outFmt.swsFormat == AV_PIX_FMT_NV12)
+                                // the planes of swsFormat, without padding between rows; storePlanes() lays them out
+                                int bytes = av_image_get_buffer_size(outFmt.swsFormat, outW, outH, 1);
+                                if (bytes < 0)
                                 {
-                                    dstStride[1] = 2 * chromaW;
+                                    throw "unsupported picture size";
                                 }
-                                else
-                                {
-                                    dstPlanes[2] = dstPlanes[1] + (size_t)chromaW * (size_t)chromaH;
-                                    dstStride[1] = chromaW;
-                                    dstStride[2] = chromaW;
-                                }
+                                converted.resize((size_t)bytes + 64);
+                                av_image_fill_arrays(dstPlanes, dstStride, converted.data(), outFmt.swsFormat, outW, outH, 1);
                             }
                             else
                             {
@@ -591,6 +726,9 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
 
                             switch (outFmt.extract)
                             {
+                            case ChannelExtract::PLANAR:
+                                storePlanes(pData, dstPlanes, dstStride, outFmt.swsFormat, outFmt, outW, outH);
+                                break;
                             case ChannelExtract::RED:
                             case ChannelExtract::GREEN:
                             case ChannelExtract::BLUE:
@@ -620,8 +758,8 @@ void VideoDecoder::DecodeInto(MafBuffer *mafBuffer)
                         {
                             header.timestampDelta = 0.0f;
                             header.byteOffset = 0;
-                            // the accessor of a planar format has one byte per element (SCALAR), of a packed format one pixel
-                            header.count = planar ? dataBytes : (uint32_t)pixels;
+                            // the accessor of a planar format has one sample per element (SCALAR), of a packed format one pixel
+                            header.count = planar ? dataBytes / (uint32_t)outFmt.bytesPerSample : (uint32_t)pixels;
                             header.bufferViewByteOffset = (uint32_t)headerSize;
                             header.bufferViewByteLength = dataBytes;
                             header.bufferViewByteStride = 0;

@@ -77,6 +77,8 @@ meson test -C builddir
 
 `subprojects/maf/test` holds the consumer tests of the Buffer API: each test plays the role of the Presentation Engine, allocates a buffer, writes frames the way the media pipelines do and reads them back.
 
+`subprojects/avpipeline/test` holds the consumer tests of the `avpipeline` media pipeline: each test encodes a clip with a known pattern using the libav libraries, plays it through the pipeline into a texture buffer, and checks the frames read. They are built only when the host can run them (not when cross-compiling).
+
 
 
 ## configure targets

@@ -56,3 +56,7 @@ avpipeline = both_libraries(
     install: true,
     install_tag: 'avpipeline'
 )
+
+if meson.can_run_host_binaries()
+  subdir('test')
+endif
