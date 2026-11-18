@@ -44,7 +44,17 @@ libav_deps = [libavformat_dep, libavcodec_dep, libavutil_dep, libswscale_dep, li
 #   libav_deps_type_name = dep.type_name()
 # endforeach
 
-avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp', 'src/MetadataDecoder.cpp', 'src/video/VideoDecodeBackend.cpp'])
+avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp', 'src/MetadataDecoder.cpp', 'src/video/VideoDecodeBackend.cpp', 'src/video/HwAccelBackend.cpp'])
+
+# hardware video decoders: VideoToolbox on Apple platforms; the software decoders remain the fallback
+hwdecode_platforms = ['darwin']
+hwdecode = get_option('hwdecode')
+if hwdecode.enabled() and host_machine.system() not in hwdecode_platforms
+  error('hwdecode: no hardware video decoder for @0@'.format(host_machine.system()))
+endif
+use_hwdecode = not hwdecode.disabled() and host_machine.system() in hwdecode_platforms
+message('hardware video decoding: @0@'.format(use_hwdecode))
+avpipeline_args = ['-DAVPIPELINE_HWDECODE=@0@'.format(use_hwdecode ? 1 : 0)]
 avpipeline_includes = include_directories('include')
 
 avpipeline = both_libraries(
@@ -52,6 +62,7 @@ avpipeline = both_libraries(
     avpipeline_sources,
     gnu_symbol_visibility : 'default',
     include_directories : [avpipeline_includes],
+    cpp_args : avpipeline_args,
     dependencies: [libmaf_dep.as_shared(), libav_deps],
     install: true,
     install_tag: 'avpipeline'

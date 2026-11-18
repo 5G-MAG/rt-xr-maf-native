@@ -34,3 +34,26 @@ The build steps are the same as above with an additional cross compilation confi
 meson setup --wipe -Davpipeline=true -Davpipeline:avcodec_dir=external/avcodec/android/arm64-v8a build/android-aarch64 --cross-file ./crossfile/android-arm64-v8a
 meson compile -C ./build/android-aarch64
 ```
+
+
+## Hardware video decoding
+
+Video streams are decoded with the hardware decoders of the platform when they support the stream, and with the FFmpeg software decoders otherwise:
+
+| Platform | Hardware decoder |
+|---|---|
+| macOS, iOS | VideoToolbox |
+
+The decoded pictures are copied to the texture buffers in the format the buffer requests, as with the software decoders.
+
+The `hwdecode` option controls it at build time: `auto` (default) uses the hardware decoders of the platform when there are some, `enabled` fails when the platform has none, `disabled` only builds the software decoders.
+```
+meson setup -Davpipeline=true -Davpipeline:hwdecode=disabled ...
+```
+
+The `AVPIPELINE_HWDECODE` environment variable changes it at run time: `0` uses the software decoders only; `require` fails to decode a stream that no hardware decoder supports (the tests use it to check the hardware decoders).
+
+
+## Tests
+
+`test/pipeline_consumer.cpp` plays clips encoded at test time through the pipeline, in the role of the Presentation Engine, and checks the frames stored in the texture buffers, including that hardware and software decoding store the same pictures. Run them with `meson test -C <builddir>`.

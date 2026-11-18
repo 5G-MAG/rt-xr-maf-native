@@ -10,7 +10,10 @@
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-#include <VideoDecodeBackend.hpp>
+#include <cstdlib>
+#include <cstring>
+
+#include "Backends.hpp"
 
 namespace
 {
@@ -64,8 +67,54 @@ AVCodecContext *OpenSoftwareDecoder(AVStream *stream)
     return ctx;
 }
 
+namespace
+{
+
+    // The environment variable AVPIPELINE_HWDECODE changes the use of hardware decoders at run time: "0" uses the
+    // software decoders only, "require" fails when no hardware decoder can decode the stream (for tests)
+    enum class HwDecode
+    {
+        AUTO,
+        OFF,
+        REQUIRED
+    };
+
+    HwDecode hwDecodeMode()
+    {
+        const char *v = std::getenv("AVPIPELINE_HWDECODE");
+        if (v && std::strcmp(v, "0") == 0)
+        {
+            return HwDecode::OFF;
+        }
+        if (v && std::strcmp(v, "require") == 0)
+        {
+            return HwDecode::REQUIRED;
+        }
+        return HwDecode::AUTO;
+    }
+
+} // namespace
+
 std::unique_ptr<VideoDecodeBackend> CreateVideoBackend(AVStream *stream, const MAF::BufferInfo &info)
 {
     (void)info;
+    const HwDecode mode = hwDecodeMode();
+#if AVPIPELINE_HWDECODE
+    if (mode != HwDecode::OFF)
+    {
+        std::unique_ptr<VideoDecodeBackend> backend;
+#if defined(__APPLE__)
+        backend = OpenHwAccelBackend(stream, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, mode == HwDecode::REQUIRED);
+#endif
+        if (backend)
+        {
+            return backend;
+        }
+    }
+#endif
+    if (mode == HwDecode::REQUIRED)
+    {
+        throw "no hardware decoder for the stream";
+    }
     return std::make_unique<SoftwareBackend>(OpenSoftwareDecoder(stream));
 }

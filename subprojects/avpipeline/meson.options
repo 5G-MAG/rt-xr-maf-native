@@ -1,1 +1,2 @@
 option('avcodec_dir', type : 'string', value : 'external/avcodec', description : 'path to avcodec ibraries relative to "./external" subdirectory')
+option('hwdecode', type : 'feature', value : 'auto', description : 'hardware video decoders (VideoToolbox on Apple platforms), with the software decoders as fallback')

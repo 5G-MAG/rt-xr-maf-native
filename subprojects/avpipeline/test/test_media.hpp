@@ -22,6 +22,7 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/pixdesc.h>
+#include <libswscale/swscale.h>
 }
 
 namespace testmedia {
@@ -35,17 +36,21 @@ inline int sample(int plane, int x, int y, int k, int depth)
 struct Clip
 {
     std::string path;
-    AVPixelFormat format;
+    AVPixelFormat format; // planar format the pattern is drawn in
     int width;
     int height;
     int frames;
     int fps;
+    AVPixelFormat encodeFormat = AV_PIX_FMT_NONE; // format given to the encoder, when it is not format
 };
 
 // Encodes clip.frames frames of the pattern in clip.format with the given encoder (lossless FFV1 by default), in a
 // container chosen from the extension of clip.path. Returns an empty string, or the error.
-inline std::string write(const Clip &clip, const char *encoder = "ffv1")
+inline std::string write(const Clip &clip, const char *encoder = "ffv1", int bitRate = 0)
 {
+    const AVPixelFormat encodeFormat = clip.encodeFormat != AV_PIX_FMT_NONE ? clip.encodeFormat : clip.format;
+    SwsContext *sws = nullptr;
+    AVFrame *encoded = nullptr;
     const AVCodec *codec = avcodec_find_encoder_by_name(encoder);
     if (!codec)
         return std::string("encoder not available: ") + encoder;
@@ -89,7 +94,9 @@ inline std::string write(const Clip &clip, const char *encoder = "ffv1")
         }
         c->width = clip.width;
         c->height = clip.height;
-        c->pix_fmt = clip.format;
+        c->pix_fmt = encodeFormat;
+        if (bitRate > 0)
+            c->bit_rate = bitRate;
         c->time_base = {1, clip.fps};
         c->framerate = {clip.fps, 1};
         c->gop_size = clip.fps;
@@ -118,6 +125,19 @@ inline std::string write(const Clip &clip, const char *encoder = "ffv1")
             error = "out of memory";
             break;
         }
+        if (encodeFormat != clip.format)
+        {
+            encoded = av_frame_alloc();
+            encoded->format = encodeFormat;
+            encoded->width = clip.width;
+            encoded->height = clip.height;
+            sws = sws_getContext(clip.width, clip.height, clip.format, clip.width, clip.height, encodeFormat, SWS_POINT, nullptr, nullptr, nullptr);
+            if (av_frame_get_buffer(encoded, 0) < 0 || !sws)
+            {
+                error = "can not convert to the encoder format";
+                break;
+            }
+        }
         for (int k = 0; k < clip.frames && error.empty(); k++)
         {
             av_frame_make_writable(frame);
@@ -144,7 +164,15 @@ inline std::string write(const Clip &clip, const char *encoder = "ffv1")
                 }
             }
             frame->pts = k;
-            if (avcodec_send_frame(c, frame) < 0 || writePackets() < 0)
+            AVFrame *input = frame;
+            if (encoded)
+            {
+                av_frame_make_writable(encoded);
+                sws_scale(sws, frame->data, frame->linesize, 0, clip.height, encoded->data, encoded->linesize);
+                encoded->pts = k;
+                input = encoded;
+            }
+            if (avcodec_send_frame(c, input) < 0 || writePackets() < 0)
                 error = "encoding failed";
         }
         if (!error.empty())
@@ -155,6 +183,8 @@ inline std::string write(const Clip &clip, const char *encoder = "ffv1")
 
     av_packet_free(&pkt);
     av_frame_free(&frame);
+    av_frame_free(&encoded);
+    sws_freeContext(sws);
     avcodec_free_context(&c);
     if (oc)
     {

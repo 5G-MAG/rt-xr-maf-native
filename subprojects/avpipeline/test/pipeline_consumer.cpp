@@ -19,6 +19,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <functional>
+#include <map>
+#include <vector>
 #include <algorithm>
 #include <set>
 #include <thread>
@@ -298,7 +300,99 @@ TEST_CASE("conversion: a picture larger than the texture is reduced, its size is
     std::filesystem::remove(clip.path);
 }
 
+#if defined(__APPLE__) && AVPIPELINE_HWDECODE
+
+// Plays the clip with the software decoder, then with the hardware decoder required, and checks that the pictures
+// stored are the same
+void compareHardwareWithSoftware(const testmedia::Clip &clip, ColorFormat format)
+{
+    const Layout layout = layoutOf(format);
+    const size_t bytes = storedBytes(layout, clip.width, clip.height);
+    std::map<int, std::vector<uint8_t>> software;
+    setenv("AVPIPELINE_HWDECODE", "0", 1);
+    play(clip, format, clip.width, clip.height, [&](Frame *f, int k) {
+        CHECK(f->length == bytes);
+        software[k].assign(f->data, f->data + std::min<size_t>(f->length, bytes));
+    });
+    int compared = 0;
+    setenv("AVPIPELINE_HWDECODE", "require", 1);
+    play(clip, format, clip.width, clip.height, [&](Frame *f, int k) {
+        CHECK(f->length == bytes);
+        auto it = software.find(k);
+        if (it == software.end() || f->length != bytes)
+            return;
+        int worst = 0;
+        for (size_t i = 0; i < bytes; i++)
+            worst = std::max(worst, std::abs((int)f->data[i] - (int)it->second[i]));
+        if (worst != 0)
+            std::fprintf(stderr, "  frame %d: hardware and software pictures differ by up to %d\n", k, worst);
+        CHECK(worst == 0);
+        compared++;
+    });
+    unsetenv("AVPIPELINE_HWDECODE");
+    CHECK(compared == clip.frames);
+}
+
+TEST_CASE("hardware decoding: required hardware decoding fails for a codec without hardware decoder")
+{
+    testmedia::Clip clip{caseFileName("ffv1_no_hardware"), AV_PIX_FMT_YUV420P, 64, 36, 2, 25};
+    if (!writeClip(clip))
+        return;
+    BufferHandler handler;
+    handler.allocate(4, (uint32_t)storedBytes(layoutOf(G8_B8R8_2PLANE_420_UNORM), 64, 36));
+    BufferInfo info{};
+    info.handler = &handler;
+    info.componentType = UNSIGNED_BYTE;
+    info.type = SCALAR;
+    info.outputMedia.width = 64;
+    info.outputMedia.height = 36;
+    info.outputMedia.format = G8_B8R8_2PLANE_420_UNORM;
+    AlternativeLocation alt;
+    alt.uri = clip.path;
+    MediaInfo media;
+    media.alternatives.push_back(alt);
+
+    setenv("AVPIPELINE_HWDECODE", "require", 1);
+    AvMediaPipeline pipeline;
+    pipeline.initialize(media, {info});
+    unsetenv("AVPIPELINE_HWDECODE");
+    CHECK(pipeline.state() == ERROR);
+    std::filesystem::remove(clip.path);
+}
+
+TEST_CASE("hardware decoding: H.264 decoded with VideoToolbox is stored like the software decoder stores it")
+{
+    testmedia::Clip clip{caseFileName("h264_videotoolbox"), AV_PIX_FMT_YUV420P, 320, 180, 10, 25};
+    std::string err = testmedia::write(clip, "h264_videotoolbox", 2000000);
+    CHECK(err.empty());
+    if (!err.empty())
+    {
+        std::fprintf(stderr, "  %s\n", err.c_str());
+        return;
+    }
+    compareHardwareWithSoftware(clip, G8_B8R8_2PLANE_420_UNORM);
+    compareHardwareWithSoftware(clip, G8_B8_R8_3PLANE_420_UNORM);
+    std::filesystem::remove(clip.path);
+}
+
+TEST_CASE("hardware decoding: 10-bit HEVC decoded with VideoToolbox is stored like the software decoder stores it")
+{
+    testmedia::Clip clip{caseFileName("hevc_main10_videotoolbox"), AV_PIX_FMT_YUV420P10LE, 320, 180, 10, 25, AV_PIX_FMT_P010LE};
+    std::string err = testmedia::write(clip, "hevc_videotoolbox", 2000000);
+    CHECK(err.empty());
+    if (!err.empty())
+    {
+        std::fprintf(stderr, "  %s\n", err.c_str());
+        return;
+    }
+    compareHardwareWithSoftware(clip, G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16);
+    std::filesystem::remove(clip.path);
+}
+
+#endif
+
 } // namespace
+
 
 
 int main()

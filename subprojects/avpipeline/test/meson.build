@@ -4,6 +4,7 @@ pipeline_consumer = executable(
     'pipeline_consumer',
     files(['pipeline_consumer.cpp']),
     include_directories : [avpipeline_includes, include_directories('../../maf/test')],
+    cpp_args : avpipeline_args,
     link_with : avpipeline.get_shared_lib(),
     dependencies : [libmaf_dep.as_shared(), libav_deps]
 )
