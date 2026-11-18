@@ -300,11 +300,11 @@ TEST_CASE("conversion: a picture larger than the texture is reduced, its size is
     std::filesystem::remove(clip.path);
 }
 
-#if defined(__APPLE__) && AVPIPELINE_HWDECODE
+#if (defined(__APPLE__) || defined(__ANDROID__)) && AVPIPELINE_HWDECODE
 
 // Plays the clip with the software decoder, then with the hardware decoder required, and checks that the pictures
-// stored are the same
-void compareHardwareWithSoftware(const testmedia::Clip &clip, ColorFormat format)
+// stored are the same, within tolerance (for codecs whose decoding is not bit exact)
+void compareHardwareWithSoftware(const testmedia::Clip &clip, ColorFormat format, int tolerance = 0)
 {
     const Layout layout = layoutOf(format);
     const size_t bytes = storedBytes(layout, clip.width, clip.height);
@@ -324,9 +324,9 @@ void compareHardwareWithSoftware(const testmedia::Clip &clip, ColorFormat format
         int worst = 0;
         for (size_t i = 0; i < bytes; i++)
             worst = std::max(worst, std::abs((int)f->data[i] - (int)it->second[i]));
-        if (worst != 0)
+        if (worst > tolerance)
             std::fprintf(stderr, "  frame %d: hardware and software pictures differ by up to %d\n", k, worst);
-        CHECK(worst == 0);
+        CHECK(worst <= tolerance);
         compared++;
     });
     unsetenv("AVPIPELINE_HWDECODE");
@@ -360,6 +360,8 @@ TEST_CASE("hardware decoding: required hardware decoding fails for a codec witho
     std::filesystem::remove(clip.path);
 }
 
+#ifdef __APPLE__
+
 TEST_CASE("hardware decoding: H.264 decoded with VideoToolbox is stored like the software decoder stores it")
 {
     testmedia::Clip clip{caseFileName("h264_videotoolbox"), AV_PIX_FMT_YUV420P, 320, 180, 10, 25};
@@ -388,6 +390,27 @@ TEST_CASE("hardware decoding: 10-bit HEVC decoded with VideoToolbox is stored li
     compareHardwareWithSoftware(clip, G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16);
     std::filesystem::remove(clip.path);
 }
+
+#endif // __APPLE__
+
+#ifdef __ANDROID__
+
+TEST_CASE("hardware decoding: MPEG-4 decoded with MediaCodec is stored like the software decoder stores it")
+{
+    // intra pictures only: MPEG-4 Part 2 decoders are not bit exact, a difference must not drift across pictures
+    testmedia::Clip clip{caseFileName("mpeg4_mediacodec"), AV_PIX_FMT_YUV420P, 320, 180, 10, 25};
+    std::string err = testmedia::write(clip, "mpeg4", 4000000, 1);
+    CHECK(err.empty());
+    if (!err.empty())
+    {
+        std::fprintf(stderr, "  %s\n", err.c_str());
+        return;
+    }
+    compareHardwareWithSoftware(clip, G8_B8R8_2PLANE_420_UNORM, 4);
+    std::filesystem::remove(clip.path);
+}
+
+#endif // __ANDROID__
 
 #endif
 

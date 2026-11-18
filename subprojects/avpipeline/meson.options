@@ -1,2 +1,3 @@
 option('avcodec_dir', type : 'string', value : 'external/avcodec', description : 'path to avcodec ibraries relative to "./external" subdirectory')
-option('hwdecode', type : 'feature', value : 'auto', description : 'hardware video decoders (VideoToolbox on Apple platforms), with the software decoders as fallback')
+option('hwdecode', type : 'feature', value : 'auto', description : 'hardware video decoders (VideoToolbox on Apple platforms, MediaCodec on Android), with the software decoders as fallback')
+option('tests', type : 'feature', value : 'auto', description : 'consumer tests: auto builds them when the host can run them, enabled also when cross-compiling')

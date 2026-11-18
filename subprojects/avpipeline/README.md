@@ -43,6 +43,7 @@ Video streams are decoded with the hardware decoders of the platform when they s
 | Platform | Hardware decoder |
 |---|---|
 | macOS, iOS | VideoToolbox |
+| Android | MediaCodec (H.264, HEVC, VP8, VP9, AV1, MPEG-4 Part 2, MPEG-2), through the NDK API |
 
 The decoded pictures are copied to the texture buffers in the format the buffer requests, as with the software decoders.
 
@@ -57,3 +58,9 @@ The `AVPIPELINE_HWDECODE` environment variable changes it at run time: `0` uses 
 ## Tests
 
 `test/pipeline_consumer.cpp` plays clips encoded at test time through the pipeline, in the role of the Presentation Engine, and checks the frames stored in the texture buffers, including that hardware and software decoding store the same pictures. Run them with `meson test -C <builddir>`.
+
+When cross-compiling, build them with `-Davpipeline:tests=enabled`, then run them on the device, e.g. on Android:
+```
+adb push <builddir>/subprojects/avpipeline/test/pipeline_consumer <builddir>/subprojects/*/lib*.so <avcodec_dir>/lib/*.so /data/local/tmp/
+adb shell "cd /data/local/tmp && LD_LIBRARY_PATH=. TMPDIR=. ./pipeline_consumer"
+```

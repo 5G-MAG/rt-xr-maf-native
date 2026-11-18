@@ -44,10 +44,11 @@ libav_deps = [libavformat_dep, libavcodec_dep, libavutil_dep, libswscale_dep, li
 #   libav_deps_type_name = dep.type_name()
 # endforeach
 
-avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp', 'src/MetadataDecoder.cpp', 'src/video/VideoDecodeBackend.cpp', 'src/video/HwAccelBackend.cpp'])
+avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp', 'src/MetadataDecoder.cpp', 'src/video/VideoDecodeBackend.cpp', 'src/video/HwAccelBackend.cpp', 'src/video/MediaCodecBackend.cpp'])
 
-# hardware video decoders: VideoToolbox on Apple platforms; the software decoders remain the fallback
-hwdecode_platforms = ['darwin']
+# hardware video decoders: VideoToolbox on Apple platforms, MediaCodec on Android; the software decoders remain the
+# fallback
+hwdecode_platforms = ['darwin', 'android']
 hwdecode = get_option('hwdecode')
 if hwdecode.enabled() and host_machine.system() not in hwdecode_platforms
   error('hwdecode: no hardware video decoder for @0@'.format(host_machine.system()))
@@ -68,6 +69,8 @@ avpipeline = both_libraries(
     install_tag: 'avpipeline'
 )
 
-if meson.can_run_host_binaries()
+# the consumer tests are built where they can run, or on demand (e.g. to run them on an Android device)
+tests = get_option('tests')
+if tests.enabled() or (tests.auto() and meson.can_run_host_binaries())
   subdir('test')
 endif

@@ -45,8 +45,9 @@ struct Clip
 };
 
 // Encodes clip.frames frames of the pattern in clip.format with the given encoder (lossless FFV1 by default), in a
-// container chosen from the extension of clip.path. Returns an empty string, or the error.
-inline std::string write(const Clip &clip, const char *encoder = "ffv1", int bitRate = 0)
+// container chosen from the extension of clip.path, with the given bit rate and distance between intra pictures (the
+// encoder defaults, one second, when 0). Returns an empty string, or the error.
+inline std::string write(const Clip &clip, const char *encoder = "ffv1", int bitRate = 0, int gopSize = 0)
 {
     const AVPixelFormat encodeFormat = clip.encodeFormat != AV_PIX_FMT_NONE ? clip.encodeFormat : clip.format;
     SwsContext *sws = nullptr;
@@ -99,7 +100,7 @@ inline std::string write(const Clip &clip, const char *encoder = "ffv1", int bit
             c->bit_rate = bitRate;
         c->time_base = {1, clip.fps};
         c->framerate = {clip.fps, 1};
-        c->gop_size = clip.fps;
+        c->gop_size = gopSize > 0 ? gopSize : clip.fps;
         if (oc->oformat->flags & AVFMT_GLOBALHEADER)
             c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         if (avcodec_open2(c, codec, nullptr) < 0)

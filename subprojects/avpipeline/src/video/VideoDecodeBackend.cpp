@@ -105,6 +105,8 @@ std::unique_ptr<VideoDecodeBackend> CreateVideoBackend(AVStream *stream, const M
         std::unique_ptr<VideoDecodeBackend> backend;
 #if defined(__APPLE__)
         backend = OpenHwAccelBackend(stream, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, mode == HwDecode::REQUIRED);
+#elif defined(__ANDROID__)
+        backend = OpenMediaCodecBackend(stream);
 #endif
         if (backend)
         {

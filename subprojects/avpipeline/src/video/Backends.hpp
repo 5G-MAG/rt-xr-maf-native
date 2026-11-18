@@ -20,3 +20,9 @@
 // pictures are decoded in the memory of the device. Returns nullptr when the codec or the device does not support it.
 // When the device fails to decode a picture, the decoder continues in software, unless required is set.
 std::unique_ptr<VideoDecodeBackend> OpenHwAccelBackend(AVStream *stream, AVHWDeviceType type, bool required);
+
+#ifdef __ANDROID__
+// A MediaCodec decoder of the platform, through the NDK API. Returns nullptr when no MediaCodec decoder supports the
+// stream.
+std::unique_ptr<VideoDecodeBackend> OpenMediaCodecBackend(AVStream *stream);
+#endif
