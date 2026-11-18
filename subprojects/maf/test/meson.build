@@ -1,3 +1,6 @@
+# test helpers (check.hpp), for the tests of the other subprojects
+maf_test_includes = include_directories('.')
+
 # Consumer tests: the test plays the role of the Presentation Engine against the Buffer API
 buffer_consumer = executable(
     'buffer_consumer',

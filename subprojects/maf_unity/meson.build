@@ -13,6 +13,9 @@ endif
 add_languages('objcpp', native : false)
 
 libmaf_dep = dependency('maf', method : 'auto', static : false, fallback : ['maf', 'libmaf_dep'])
+if not subproject('maf').get_variable('native_frames')
+  error('maf_unity: libmaf is built without native frame buffers (-Dmaf:native_frames=none)')
+endif
 
 # The Unity Native Plugin API headers are not part of the repository (Unity Companion License): they are taken from a
 # Unity installation, by default the newest Unity editor installed with Unity Hub
@@ -29,20 +32,21 @@ unity_api_includes = include_directories(unity_api_dir)
 
 maf_unity_includes = include_directories('include', 'src')
 
+apple_deps = dependency('appleframeworks', modules : ['Foundation', 'Metal', 'CoreVideo'])
+
 # the parts of the plugin that do not depend on Unity, linked by the tests
 maf_unity_core = static_library(
   'maf_unity_core',
-  files(['src/TextureRegistry.cpp']),
-  include_directories : maf_unity_includes,
-  dependencies : [libmaf_dep.as_shared()],
+  files(['src/TextureRegistry.cpp', 'src/MetalImporter.mm']),
+  include_directories : [maf_unity_includes, unity_api_includes],
+  objcpp_args : ['-fobjc-arc'],
+  dependencies : [libmaf_dep.as_shared(), apple_deps],
   pic : true
 )
 
-apple_deps = dependency('appleframeworks', modules : ['Foundation', 'Metal', 'CoreVideo'])
-
 maf_unity = shared_library(
   'maf_unity',
-  files(['src/MafUnity.mm', 'src/MetalImporter.mm']),
+  files(['src/MafUnity.mm']),
   include_directories : [maf_unity_includes, unity_api_includes],
   objcpp_args : ['-fobjc-arc'],
   link_with : maf_unity_core,

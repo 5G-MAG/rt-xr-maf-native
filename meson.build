@@ -11,14 +11,21 @@ if get_option('libmaf')
   subproject('maf')
 endif
 
+avpipeline_proj = disabler()
 if get_option('avpipeline')
-    subproject('avpipeline')
+    avpipeline_proj = subproject('avpipeline')
 endif
 
+maf_unity_proj = disabler()
 if not get_option('unityplugin').disabled()
-    subproject('maf_unity', required : get_option('unityplugin'))
+    maf_unity_proj = subproject('maf_unity', required : get_option('unityplugin'))
 endif
 
 if get_option('csharp')
     subproject('maf_csharp')
+endif
+
+# end-to-end consumer tests: frames of the hardware decoders shown through the maf_unity plugin
+if get_option('avpipeline') and maf_unity_proj.found() and meson.can_run_host_binaries() and avpipeline_proj.get_variable('use_hwdecode')
+    subdir('test')
 endif

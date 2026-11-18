@@ -79,6 +79,10 @@ meson test -C builddir
 
 `subprojects/avpipeline/test` holds the consumer tests of the `avpipeline` media pipeline: each test encodes a clip with a known pattern using the libav libraries, plays it through the pipeline into a texture buffer, and checks the frames read. They are built only when the host can run them (not when cross-compiling).
 
+`subprojects/maf_unity/test` holds the consumer tests of the `maf_unity` plugin, without Unity: the lifetime of the frames shown on textures, and the import of native pictures as Metal textures (on a Metal device).
+
+`test` holds the end-to-end consumer tests, built with `avpipeline`, `maf_unity` and hardware decoding: a hardware decoder writes native frames, the plugin imports them as Metal textures and releases them, as Unity would without rendering.
+
 
 
 ## configure targets
