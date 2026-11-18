@@ -45,12 +45,16 @@ libav_deps = [libavformat_dep, libavcodec_dep, libavutil_dep, libswscale_dep, li
 # endforeach
 
 avpipeline_sources = files(['src/AvPipeline.cpp', 'src/Decoder.cpp', 'src/MetadataDecoder.cpp', 'src/video/VideoDecodeBackend.cpp', 'src/video/HwAccelBackend.cpp', 'src/video/MediaCodecBackend.cpp',
-  'src/video/NativeUploader.cpp', 'src/video/AppleNativeUploader.cpp'])
+  'src/video/NativeUploader.cpp', 'src/video/AppleNativeUploader.cpp', 'src/video/AndroidNativeUploader.cpp'])
 
 # platform libraries of the native frames
 platform_deps = []
 if host_machine.system() == 'darwin'
   platform_deps += dependency('appleframeworks', modules : ['CoreFoundation', 'CoreVideo', 'VideoToolbox'])
+elif host_machine.system() == 'android'
+  foreach lib : ['nativewindow', 'mediandk', 'android', 'log']
+    platform_deps += cxx.find_library(lib)
+  endforeach
 endif
 
 # hardware video decoders: VideoToolbox on Apple platforms, MediaCodec on Android; the software decoders remain the
@@ -63,6 +67,10 @@ endif
 use_hwdecode = not hwdecode.disabled() and host_machine.system() in hwdecode_platforms
 message('hardware video decoding: @0@'.format(use_hwdecode))
 avpipeline_args = ['-DAVPIPELINE_HWDECODE=@0@'.format(use_hwdecode ? 1 : 0)]
+if host_machine.system() == 'android'
+  # the APIs of newer Android versions are weak symbols, used after a check of the version (__builtin_available)
+  avpipeline_args += ['-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__', '-Werror=unguarded-availability']
+endif
 avpipeline_includes = include_directories('include')
 
 avpipeline = both_libraries(

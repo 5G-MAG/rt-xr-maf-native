@@ -31,14 +31,16 @@ In a native buffer:
 - `free()` does not release the handles.
 - The picture holds the samples of `outputMedia.format`, in a layout of the platform that the handle describes (its pixel format and planes). A format the platform has no layout for is stored in an equivalent one with the same samples:
 
-  | Requested format | Apple (`CVPixelBuffer` pixel format) |
-  |---|---|
-  | `RGB`, `RGBA`, `BGR`, `BGRA` | `32BGRA` (alpha 1 when the format has none) |
-  | `RED`, `GREEN`, `BLUE`, `DEPTH_COMPONENT` / `RG` | `OneComponent8` / `TwoComponent8` |
-  | `G8_B8_R8_3PLANE_420_UNORM` | `420YpCbCr8Planar` |
-  | 2-plane, and 3-plane 4:2:2 and 4:4:4, YCbCr formats | the 2-plane `YpCbCr…BiPlanar` format with the same sampling and bit depth |
+  | Requested format | Apple (`CVPixelBuffer` pixel format) | Android (`AHardwareBuffer` format) |
+  |---|---|---|
+  | `RGB`, `RGBA`, `BGR`, `BGRA` | `32BGRA` (alpha 1 when the format has none) | `R8G8B8A8_UNORM` (alpha 1 when the format has none) |
+  | `RED`, `GREEN`, `BLUE`, `DEPTH_COMPONENT` | `OneComponent8` | `R8_UNORM` (when the device supports it) |
+  | `RG` | `TwoComponent8` | not supported |
+  | 8-bit 4:2:0 (2-plane or 3-plane) | `420YpCbCr8Planar` (3-plane), `420YpCbCr8BiPlanar` (2-plane) | `Y8Cb8Cr8_420`, planes laid out by the device |
+  | 10-bit 4:2:0 (2-plane or 3-plane) | `420YpCbCr10BiPlanar` | `YCbCr_P010` (when the device supports it) |
+  | 4:2:2 and 4:4:4 (2-plane or 3-plane) | the 2-plane `YpCbCr…BiPlanar` format with the same sampling and bit depth | not supported |
 
-  YCbCr pictures use the full range variant of the pixel format when the decoded picture does.
+  On Apple platforms, YCbCr pictures use the full range variant of the pixel format when the decoded picture does. Android native frames require Android 10 (API 29).
 
 The Presentation Engine checks `initialize()`: the pipeline is in the `ERROR` state when a native buffer is not allocated with `allocateNative()`, has more than one accessor, has no `outputMedia` size, is not mapped to a video track, or requests a format the platform can not store natively.
 

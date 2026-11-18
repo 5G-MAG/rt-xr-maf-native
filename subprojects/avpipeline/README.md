@@ -57,9 +57,11 @@ The `AVPIPELINE_HWDECODE` environment variable changes it at run time: `0` uses 
 
 ## Native frames
 
-A texture buffer with `outputMedia.memory = FRAME_MEMORY_NATIVE` receives pictures in memory the GPU imports without a copy (see [docs/maf.md](../../docs/maf.md#native-frame-buffers)): IOSurface-backed `CVPixelBuffer`s on Apple platforms. The pipeline keeps a reference to the picture of each frame until the frame is written again or the pipeline is destroyed, so the last pictures stay valid when the media ends or the pipeline stops.
+A texture buffer with `outputMedia.memory = FRAME_MEMORY_NATIVE` receives pictures in memory the GPU imports without a copy (see [docs/maf.md](../../docs/maf.md#native-frame-buffers)): IOSurface-backed `CVPixelBuffer`s on Apple platforms, `AHardwareBuffer`s on Android (10 and later). The pipeline keeps a reference to the picture of each frame until the frame is written again or the pipeline is destroyed, so the last pictures stay valid when the media ends or the pipeline stops.
 
 The pictures of VideoToolbox are handed over as they are when they have the stored format and size, and otherwise converted by VideoToolbox (`VTPixelTransferSession`) into a new `CVPixelBuffer`: they do not go through system memory. Pictures decoded in software, and the formats of a single component (`RED`, `GREEN`, `BLUE`, `RG`, `DEPTH_COMPONENT`), are converted in system memory and copied into the native pictures.
+
+On Android, the pictures are converted in system memory and copied into `AHardwareBuffer`s, through `AHardwareBuffer_lockPlanes`, which gives the plane layout of the device.
 
 
 ## Tests

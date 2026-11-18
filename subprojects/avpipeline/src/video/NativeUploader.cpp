@@ -14,12 +14,16 @@
 
 #if defined(__APPLE__) && defined(MAF_NATIVE_FRAMES)
 std::unique_ptr<NativeUploader> CreateAppleNativeUploader();
+#elif defined(__ANDROID__) && defined(MAF_NATIVE_FRAMES)
+std::unique_ptr<NativeUploader> CreateAndroidNativeUploader();
 #endif
 
 std::unique_ptr<NativeUploader> CreateNativeUploader()
 {
 #if defined(__APPLE__) && defined(MAF_NATIVE_FRAMES)
     return CreateAppleNativeUploader();
+#elif defined(__ANDROID__) && defined(MAF_NATIVE_FRAMES)
+    return CreateAndroidNativeUploader();
 #else
     return nullptr;
 #endif

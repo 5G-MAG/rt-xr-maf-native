@@ -30,6 +30,8 @@
 
 #if defined(__APPLE__)
 #include <CoreVideo/CoreVideo.h>
+#elif defined(__ANDROID__)
+#include <android/hardware_buffer.h>
 #endif
 
 #include "check.hpp"
@@ -426,6 +428,159 @@ TEST_CASE("native buffer: RGB and RGBA textures are BGRA pixel buffers")
     std::filesystem::remove(clip.path);
 }
 
+#endif // __APPLE__ && MAF_NATIVE_FRAMES
+
+#if defined(__ANDROID__) && defined(MAF_NATIVE_FRAMES)
+
+// Whether Android stores the requested YCbCr format natively: 4:2:0 only, AHardwareBuffer has no 4:2:2 or 4:4:4
+bool androidStoresNatively(ColorFormat requested)
+{
+    switch (requested)
+    {
+    case G8_B8_R8_3PLANE_420_UNORM:
+    case G8_B8R8_2PLANE_420_UNORM:
+    case G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
+    case G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// The samples of a YCbCr AHardwareBuffer, without the padding of its rows, in the layout of maf.hpp
+std::vector<uint8_t> readPlanes(AHardwareBuffer *buffer, const Layout &l, int w, int h)
+{
+    std::vector<uint8_t> out;
+    if (__builtin_available(android 29, *))
+    {
+        AHardwareBuffer_Planes planes = {};
+        if (AHardwareBuffer_lockPlanes(buffer, AHARDWAREBUFFER_USAGE_CPU_READ_RARELY, -1, nullptr, &planes) != 0 || planes.planeCount != 3)
+            return out;
+        const int bps = l.depth > 8 ? 2 : 1;
+        const int cw = (w + 1) / 2, ch = (h + 1) / 2;
+        auto sampleAt = [&](int p, int x, int y) {
+            const uint8_t *s = (const uint8_t *)planes.planes[p].data + (size_t)y * planes.planes[p].rowStride + (size_t)x * planes.planes[p].pixelStride;
+            return std::vector<uint8_t>(s, s + bps);
+        };
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                auto v = sampleAt(0, x, y);
+                out.insert(out.end(), v.begin(), v.end());
+            }
+        if (l.twoPlanes)
+        {
+            for (int y = 0; y < ch; y++)
+                for (int x = 0; x < cw; x++)
+                    for (int c = 1; c <= 2; c++)
+                    {
+                        auto v = sampleAt(c, x, y);
+                        out.insert(out.end(), v.begin(), v.end());
+                    }
+        }
+        else
+        {
+            for (int c = 1; c <= 2; c++)
+                for (int y = 0; y < ch; y++)
+                    for (int x = 0; x < cw; x++)
+                    {
+                        auto v = sampleAt(c, x, y);
+                        out.insert(out.end(), v.begin(), v.end());
+                    }
+        }
+        AHardwareBuffer_unlock(buffer, nullptr);
+    }
+    return out;
+}
+
+const bool registeredAndroidNativeFormatCases = [] {
+    for (const FormatCase &fc : kFormatCases)
+    {
+        std::string name = std::string("native buffer: ") + fc.name;
+        check::cases().push_back({strdup(name.c_str()), [fc] {
+            testmedia::Clip clip{caseFileName((std::string("native_") + fc.name).c_str()), fc.source, fc.width, fc.height, 10, 25};
+            if (!writeClip(clip))
+                return;
+            const Layout layout = layoutOf(fc.stored);
+            if (!androidStoresNatively(fc.stored))
+            {
+                // initialize() rejects the buffer: the Presentation Engine uses a CPU buffer
+                BufferHandler handler;
+                handler.allocateNative(4);
+                BufferInfo info{};
+                info.handler = &handler;
+                info.componentType = layout.depth > 8 ? UNSIGNED_SHORT : UNSIGNED_BYTE;
+                info.type = SCALAR;
+                info.outputMedia.width = (uint32_t)fc.width;
+                info.outputMedia.height = (uint32_t)fc.height;
+                info.outputMedia.format = fc.stored;
+                info.outputMedia.memory = FRAME_MEMORY_NATIVE;
+                AlternativeLocation alt;
+                alt.uri = clip.path;
+                MediaInfo media;
+                media.alternatives.push_back(alt);
+                AvMediaPipeline pipeline;
+                pipeline.initialize(media, {info});
+                CHECK(pipeline.state() == ERROR);
+                std::filesystem::remove(clip.path);
+                return;
+            }
+            play(clip, fc.stored, fc.width, fc.height, [&](Frame *f, int k) {
+                CHECK(f->length == 0);
+                CHECK((f->extraFrameInfoFlags & 0x01) && f->width == (uint32_t)clip.width && f->height == (uint32_t)clip.height);
+                AHardwareBuffer *buffer = (AHardwareBuffer *)f->data;
+                CHECK(buffer != nullptr);
+                if (!buffer)
+                    return;
+                AHardwareBuffer_Desc desc = {};
+                AHardwareBuffer_describe(buffer, &desc);
+                CHECK(desc.width == (uint32_t)clip.width && desc.height == (uint32_t)clip.height);
+                CHECK(desc.format == (layout.depth > 8 ? (uint32_t)AHARDWAREBUFFER_FORMAT_YCbCr_P010 : (uint32_t)AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420));
+                std::vector<uint8_t> samples = readPlanes(buffer, layout, clip.width, clip.height);
+                CHECK(samples.size() == storedBytes(layout, clip.width, clip.height));
+                if (samples.size() != storedBytes(layout, clip.width, clip.height))
+                    return;
+                int err = maxError(samples.data(), layout, clip.width, clip.height, k);
+                if (err != 0)
+                    std::fprintf(stderr, "  frame %d: max sample error %d\n", k, err);
+                CHECK(err == 0);
+            }, Memory::NATIVE);
+            std::filesystem::remove(clip.path);
+        }});
+    }
+    return true;
+}();
+
+TEST_CASE("native buffer: RGB and RGBA textures are RGBA hardware buffers")
+{
+    testmedia::Clip clip{caseFileName("native_rgba"), AV_PIX_FMT_YUV420P, 64, 36, 3, 25};
+    if (!writeClip(clip))
+        return;
+    for (ColorFormat format : {RGB, RGBA, BGRA})
+    {
+        play(clip, format, 64, 36, [&](Frame *f, int) {
+            AHardwareBuffer *buffer = (AHardwareBuffer *)f->data;
+            CHECK(buffer != nullptr);
+            if (!buffer)
+                return;
+            AHardwareBuffer_Desc desc = {};
+            AHardwareBuffer_describe(buffer, &desc);
+            CHECK(desc.format == AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
+            void *px = nullptr;
+            if (AHardwareBuffer_lock(buffer, AHARDWAREBUFFER_USAGE_CPU_READ_RARELY, -1, nullptr, &px) == 0)
+            {
+                CHECK(((const uint8_t *)px)[3] == 255); // opaque
+                AHardwareBuffer_unlock(buffer, nullptr);
+            }
+        }, Memory::NATIVE);
+    }
+    std::filesystem::remove(clip.path);
+}
+
+#endif // __ANDROID__ && MAF_NATIVE_FRAMES
+
+#ifdef MAF_NATIVE_FRAMES
+
 TEST_CASE("native buffer: frames that are not released stop the producer, releasing them resumes it")
 {
     testmedia::Clip clip{caseFileName("native_hold"), AV_PIX_FMT_YUV420P, 64, 36, 10, 25};
@@ -452,14 +607,14 @@ TEST_CASE("native buffer: frames that are not released stop the producer, releas
 
     // read everything that arrives within half a second, without releasing anything
     std::vector<Frame *> held;
-    std::set<CVPixelBufferRef> pictures;
+    std::set<void *> pictures;
     auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
     while (std::chrono::steady_clock::now() < until)
     {
         if (Frame *f = handler.readFrame())
         {
             held.push_back(f);
-            pictures.insert((CVPixelBufferRef)f->data);
+            pictures.insert(f->data);
         }
         else
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -486,10 +641,6 @@ TEST_CASE("native buffer: frames that are not released stop the producer, releas
     pipeline.stopFetching();
     std::filesystem::remove(clip.path);
 }
-
-#endif
-
-#ifdef MAF_NATIVE_FRAMES
 
 TEST_CASE("native buffer: initialize() rejects a buffer that can not be native")
 {
@@ -520,9 +671,7 @@ TEST_CASE("native buffer: initialize() rejects a buffer that can not be native")
     BufferHandler native;
     native.allocateNative(4);
     CHECK(stateWith(native, 0, 0) == ERROR); // not a texture
-#ifdef __APPLE__
     CHECK(stateWith(native, 64, 36) == READY);
-#endif
     std::filesystem::remove(clip.path);
 }
 
