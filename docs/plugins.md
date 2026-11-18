@@ -47,8 +47,11 @@ For each texture, from the main thread:
 
 Frames read from a native buffer and not submitted (frames skipped to catch up with the presentation time) are released by the caller with `releaseFrame`. Before a buffer is freed, call `MafUnity_ForgetBuffer(handler)`.
 
-| Graphics API | Native frames | Plane textures |
+| Graphics API | Native frames | Frames shown with |
 |---|---|---|
-| Metal (macOS, iOS) | `CVPixelBuffer` | `id<MTLTexture>` per plane |
+| Metal (macOS, iOS) | `CVPixelBuffer` | an `id<MTLTexture>` per plane, without a copy |
+| Vulkan (Android) | `AHardwareBuffer` | the target texture: the picture is imported as a Vulkan image without a copy, and rendered into the target through a `VkSamplerYcbcrConversion` (Unity can not sample the YCbCr formats of the device) |
 
-The plugin is built when the PluginAPI headers of a Unity installation are found: by default those of the newest Unity editor installed with Unity Hub, otherwise set with `-Dmaf_unity:unity_plugin_api=<Unity>/PluginAPI`. The headers are not part of this repository, as they are under the Unity Companion License. The top-level `unityplugin` option (`auto`, `enabled`, `disabled`) controls the build.
+With Vulkan, the plugin enables the extensions it needs (`VK_ANDROID_external_memory_android_hardware_buffer`, `VK_EXT_queue_family_foreign`, sampler YCbCr conversion) when Unity creates its device: the plugin must be loaded at startup (*Load on startup* in the plugin import settings). Otherwise `MafUnity_IsSupported()` returns 0 when the device lacks them. The shaders are in `subprojects/maf_unity/shaders`; `compile.sh` regenerates `src/VulkanShaders.h` with `glslc` from the Android NDK.
+
+The plugin is built when the PluginAPI headers of a Unity installation are found: by default those of the newest Unity editor installed with Unity Hub, otherwise set with `-Dmaf_unity:unity_plugin_api=<Unity>/PluginAPI`. The headers are not part of this repository, as they are under the Unity Companion License. The top-level `unityplugin` option (`auto`, `enabled`, `disabled`) controls the build. The plugin is built for macOS and Android, with `libmaf` built with native frame buffers.

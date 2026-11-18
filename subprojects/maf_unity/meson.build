@@ -7,10 +7,13 @@ project(
 
 # Unity native rendering plugin: shows the frames of MAF native frame buffers in Unity textures (see docs/plugins.md)
 
-if host_machine.system() != 'darwin'
-  error('maf_unity: no picture importer for @0@ yet'.format(host_machine.system()))
+# graphics APIs: Metal on Apple platforms, Vulkan on Android
+system = host_machine.system()
+if system == 'darwin'
+  add_languages('objcpp', native : false)
+elif system != 'android'
+  error('maf_unity: no graphics backend for @0@ yet'.format(system))
 endif
-add_languages('objcpp', native : false)
 
 libmaf_dep = dependency('maf', method : 'auto', static : false, fallback : ['maf', 'libmaf_dep'])
 if not subproject('maf').get_variable('native_frames')
@@ -32,30 +35,50 @@ unity_api_includes = include_directories(unity_api_dir)
 
 maf_unity_includes = include_directories('include', 'src')
 
-apple_deps = dependency('appleframeworks', modules : ['Foundation', 'Metal', 'CoreVideo'])
+core_sources = files(['src/TextureRegistry.cpp'])
+plugin_sources = files(['src/MafUnity.cpp'])
+apple_deps = []
+platform_deps = []
+if system == 'darwin'
+  apple_deps = dependency('appleframeworks', modules : ['Foundation', 'Metal', 'CoreVideo'])
+  platform_deps = [apple_deps]
+  core_sources += files(['src/MetalImporter.mm'])
+  plugin_sources += files(['src/MetalBackend.mm'])
+else
+  # the Vulkan functions come from Unity (vkGetInstanceProcAddr): no link to the Vulkan loader
+  cxx = meson.get_compiler('cpp')
+  foreach lib : ['nativewindow', 'android', 'log']
+    platform_deps += cxx.find_library(lib)
+  endforeach
+  plugin_sources += files(['src/VulkanBackend.cpp'])
+endif
+# Vulkan structures are initialized with their sType only, the other fields being zero
+plugin_args = system == 'android' ? ['-Wno-missing-field-initializers'] : []
 
 # the parts of the plugin that do not depend on Unity, linked by the tests
 maf_unity_core = static_library(
   'maf_unity_core',
-  files(['src/TextureRegistry.cpp', 'src/MetalImporter.mm']),
+  core_sources,
   include_directories : [maf_unity_includes, unity_api_includes],
   objcpp_args : ['-fobjc-arc'],
-  dependencies : [libmaf_dep.as_shared(), apple_deps],
+  dependencies : [libmaf_dep.as_shared(), platform_deps],
   pic : true
 )
 
 maf_unity = shared_library(
   'maf_unity',
-  files(['src/MafUnity.cpp', 'src/MetalBackend.mm']),
+  plugin_sources,
   include_directories : [maf_unity_includes, unity_api_includes],
+  cpp_args : plugin_args,
   objcpp_args : ['-fobjc-arc'],
   link_with : maf_unity_core,
-  dependencies : [libmaf_dep.as_shared(), apple_deps],
+  dependencies : [libmaf_dep.as_shared(), platform_deps],
   gnu_symbol_visibility : 'default',
   install : true,
   install_tag : 'maf_unity'
 )
 
-if meson.can_run_host_binaries()
+# the tests use Metal
+if system == 'darwin' and meson.can_run_host_binaries()
   subdir('test')
 endif
