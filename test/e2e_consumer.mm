@@ -80,7 +80,7 @@ TEST_CASE("VideoToolbox frames are shown as Metal textures and released back to 
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
-        const ImportedPicture *p = registry.Submit(texture, &handler, f->index, f->data, *importer);
+        const ImportedPicture *p = registry.Submit(texture, &handler, f->index, f->data, (int)f->width, (int)f->height, *importer);
         CHECK(p != nullptr);
         if (!p)
             break;

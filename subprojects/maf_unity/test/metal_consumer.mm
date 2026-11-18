@@ -92,7 +92,7 @@ void checkImport(const Expected &e)
         return;
     const CFIndex refs = CFGetRetainCount(buffer);
     {
-        std::shared_ptr<ImportedPicture> picture = importer->Import(buffer);
+        std::shared_ptr<ImportedPicture> picture = importer->Import(buffer, ImportParams());
         CHECK(picture != nullptr);
         if (!picture)
             return;
@@ -168,10 +168,10 @@ TEST_CASE("metal: pictures of other formats are not imported")
     CVPixelBufferRef buffer = makeBuffer(kCVPixelFormatType_24RGB, 64, 36);
     if (buffer)
     {
-        CHECK(importer->Import(buffer) == nullptr);
+        CHECK(importer->Import(buffer, ImportParams()) == nullptr);
         CVPixelBufferRelease(buffer);
     }
-    CHECK(importer->Import(nullptr) == nullptr);
+    CHECK(importer->Import(nullptr, ImportParams()) == nullptr);
 }
 
 int main()

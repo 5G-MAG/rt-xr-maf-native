@@ -24,10 +24,22 @@
 
 #include <maf.hpp>
 
-// A picture imported for the GPU: one native texture of the graphics API per plane. Destroying it releases the
-// textures and the reference to the picture the importer took.
+// How a picture is imported
+struct ImportParams
+{
+    int width = 0;       // size of the frame: the top-left region of the picture
+    int height = 0;
+    int ycbcrModel = -1; // VkSamplerYcbcrModelConversion / VkSamplerYcbcrRange of MPEG_sampler_YCbCr, -1: the picture's
+    int ycbcrRange = -1;
+};
+
+// A picture imported for the GPU: one native texture of the graphics API per plane (graphics APIs that sample the
+// planes), or a state the backend renders the picture from (planeCount 0). Destroying it releases the textures and the
+// reference to the picture the importer took.
 struct ImportedPicture
 {
+    ImportParams params;
+    std::shared_ptr<void> state; // the backend's
     int planeCount = 0;
     void *texture[3] = {nullptr, nullptr, nullptr};
     int format[3] = {0, 0, 0}; // MafUnityPlaneFormat
@@ -49,7 +61,7 @@ class PictureImporter
 public:
     virtual ~PictureImporter() = default;
     // The picture imported, or nullptr when it can not be
-    virtual std::shared_ptr<ImportedPicture> Import(void *picture) = 0;
+    virtual std::shared_ptr<ImportedPicture> Import(void *picture, const ImportParams &params) = 0;
 };
 
 class TextureRegistry
@@ -58,11 +70,24 @@ public:
     // releaseFrame: what releases a frame to its buffer (BufferHandler::releaseFrame)
     explicit TextureRegistry(std::function<void(MAF::BufferHandler *, uint8_t)> releaseFrame);
 
+    // What a texture shows the frames with
+    struct Settings
+    {
+        int ycbcrModel = -1; // see ImportParams
+        int ycbcrRange = -1;
+        void *target = nullptr; // native texture the frames are rendered into (graphics APIs without plane textures)
+        bool flipY = false;
+    };
+
     int Create();
     void Destroy(int texture);
-    // Shows a frame on a texture, importing its picture unless another texture shows it already. The frame the texture
-    // showed before is retired when no texture shows it any more. Returns the picture, nullptr on failure.
-    const ImportedPicture *Submit(int texture, MAF::BufferHandler *handler, uint8_t frameIndex, void *picture, PictureImporter &importer);
+    // Shows a frame of width x height on a texture, importing its picture unless another texture shows it already. The
+    // frame the texture showed before is retired when no texture shows it any more. Returns the picture, nullptr on
+    // failure.
+    const ImportedPicture *Submit(int texture, MAF::BufferHandler *handler, uint8_t frameIndex, void *picture, int width, int height,
+                                  PictureImporter &importer);
+    bool SetSettings(int texture, const Settings &settings);
+    Settings GetSettings(int texture);
     // The picture the texture shows, or nullptr
     const ImportedPicture *Current(int texture);
 
@@ -95,6 +120,7 @@ private:
     std::mutex mutex_;
     int nextTexture_ = 1;
     std::map<int, Key> textures_;          // texture -> frame it shows (handler nullptr: none)
+    std::map<int, Settings> settings_;
     std::map<Key, Shown> shown_;
     std::vector<Shown> retired_;           // no texture shows them, waiting for a batch
     uint64_t nextBatch_ = 1;

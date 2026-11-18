@@ -29,12 +29,13 @@ struct FakeImporter : PictureImporter
     int imports = 0;
     int released = 0;
     bool fail = false;
-    std::shared_ptr<ImportedPicture> Import(void *picture) override
+    std::shared_ptr<ImportedPicture> Import(void *picture, const ImportParams &params) override
     {
         if (fail)
             return nullptr;
         imports++;
         auto p = std::make_shared<ImportedPicture>();
+        p->params = params;
         p->planeCount = 2;
         p->texture[0] = picture;
         p->release = [this] { released++; };
@@ -73,13 +74,13 @@ TEST_CASE("a frame shown on a texture is released once another frame is shown an
     TextureRegistry r = registryFor();
     int t = r.Create();
 
-    const ImportedPicture *p = r.Submit(t, &h, 0, &fakePictures[0], importer);
+    const ImportedPicture *p = r.Submit(t, &h, 0, &fakePictures[0], 64, 36, importer);
     CHECK(p != nullptr && p->planeCount == 2 && p->texture[0] == &fakePictures[0]);
     CHECK(r.Current(t) == p);
-    CHECK(r.Submit(t, &h, 0, &fakePictures[0], importer) == p); // the same frame again: nothing changes
+    CHECK(r.Submit(t, &h, 0, &fakePictures[0], 64, 36, importer) == p); // the same frame again: nothing changes
     CHECK(importer.imports == 1);
 
-    CHECK(r.Submit(t, &h, 1, &fakePictures[1], importer) != nullptr);
+    CHECK(r.Submit(t, &h, 1, &fakePictures[1], 64, 36, importer) != nullptr);
     CHECK(r.PendingFrames() == 1);
     CHECK(!h.isWritable(0)); // frame 0 is still held: the GPU may use it
     uint64_t batch = r.RetireBatch();
@@ -102,13 +103,13 @@ TEST_CASE("a frame shown on two textures is imported once and released when neit
     FakeImporter importer;
     TextureRegistry r = registryFor();
     int a = r.Create(), b = r.Create();
-    CHECK(r.Submit(a, &h, 0, &fakePictures[0], importer) == r.Submit(b, &h, 0, &fakePictures[0], importer));
+    CHECK(r.Submit(a, &h, 0, &fakePictures[0], 64, 36, importer) == r.Submit(b, &h, 0, &fakePictures[0], 64, 36, importer));
     CHECK(importer.imports == 1);
     CHECK(r.ShownFrames() == 1);
 
-    r.Submit(a, &h, 1, &fakePictures[1], importer);
+    r.Submit(a, &h, 1, &fakePictures[1], 64, 36, importer);
     CHECK(r.RetireBatch() == 0); // b still shows frame 0
-    r.Submit(b, &h, 1, &fakePictures[1], importer);
+    r.Submit(b, &h, 1, &fakePictures[1], 64, 36, importer);
     uint64_t batch = r.RetireBatch();
     CHECK(batch != 0);
     r.Complete(batch);
@@ -126,10 +127,10 @@ TEST_CASE("released frames can be written again by the producer")
     FakeImporter importer;
     TextureRegistry r = registryFor();
     int t = r.Create();
-    r.Submit(t, &h, 0, &fakePictures[0], importer);
-    r.Submit(t, &h, 1, &fakePictures[1], importer);
+    r.Submit(t, &h, 0, &fakePictures[0], 64, 36, importer);
+    r.Submit(t, &h, 1, &fakePictures[1], 64, 36, importer);
     h.releaseFrame(1); // the consumer releases a skipped frame itself
-    r.Submit(t, &h, 2, &fakePictures[2], importer);
+    r.Submit(t, &h, 2, &fakePictures[2], 64, 36, importer);
     r.Complete(r.RetireBatch()); // frames 0 and 1 no longer shown
     CHECK(h.isWritable(0));
     h.free();
@@ -143,9 +144,9 @@ TEST_CASE("destroying a texture retires its frame; a failed import keeps the fra
     FakeImporter importer;
     TextureRegistry r = registryFor();
     int t = r.Create();
-    const ImportedPicture *p = r.Submit(t, &h, 0, &fakePictures[0], importer);
+    const ImportedPicture *p = r.Submit(t, &h, 0, &fakePictures[0], 64, 36, importer);
     importer.fail = true;
-    CHECK(r.Submit(t, &h, 1, &fakePictures[1], importer) == nullptr);
+    CHECK(r.Submit(t, &h, 1, &fakePictures[1], 64, 36, importer) == nullptr);
     CHECK(r.Current(t) == p);
     r.Destroy(t);
     CHECK(r.Current(t) == nullptr);
@@ -161,16 +162,35 @@ TEST_CASE("the frames of a forgotten buffer are not released to it")
     BufferHandler h;
     FakeImporter importer;
     int t = r.Create();
-    r.Submit(t, &h, 0, &fakePictures[0], importer);
-    r.Submit(t, &h, 1, &fakePictures[1], importer);
+    r.Submit(t, &h, 0, &fakePictures[0], 64, 36, importer);
+    r.Submit(t, &h, 1, &fakePictures[1], 64, 36, importer);
     uint64_t batch = r.RetireBatch();
-    r.Submit(t, &h, 2, &fakePictures[2], importer);
+    r.Submit(t, &h, 2, &fakePictures[2], 64, 36, importer);
     r.ForgetBuffer(&h); // the buffer is about to be freed
     r.Complete(batch);
     r.Destroy(t);
     r.Complete(r.RetireBatch());
     CHECK(releases == 0);
     CHECK(importer.released == 3); // the pictures are released all the same
+}
+
+TEST_CASE("the frame size and the color conversion of the texture are given to the importer")
+{
+    BufferHandler h;
+    FakeImporter importer;
+    TextureRegistry r([](BufferHandler *, uint8_t) {});
+    int t = r.Create();
+    TextureRegistry::Settings settings;
+    settings.ycbcrModel = 2; // VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709
+    settings.ycbcrRange = 1; // VK_SAMPLER_YCBCR_RANGE_ITU_NARROW
+    settings.flipY = true;
+    CHECK(r.SetSettings(t, settings));
+    CHECK(!r.SetSettings(t + 100, settings));
+    const ImportedPicture *p = r.Submit(t, &h, 0, &fakePictures[0], 1920, 1080, importer);
+    CHECK(p && p->params.width == 1920 && p->params.height == 1080 && p->params.ycbcrModel == 2 && p->params.ycbcrRange == 1);
+    CHECK(r.GetSettings(t).flipY);
+    r.Destroy(t);
+    r.Complete(r.RetireBatch());
 }
 
 int main()

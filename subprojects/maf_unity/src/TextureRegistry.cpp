@@ -22,6 +22,7 @@ int TextureRegistry::Create()
     std::lock_guard<std::mutex> lock(mutex_);
     int id = nextTexture_++;
     textures_[id] = Key(nullptr, 0, nullptr);
+    settings_[id] = Settings();
     return id;
 }
 
@@ -50,9 +51,11 @@ void TextureRegistry::Destroy(int texture)
     }
     Retire(it->second);
     textures_.erase(it);
+    settings_.erase(texture);
 }
 
-const ImportedPicture *TextureRegistry::Submit(int texture, MAF::BufferHandler *handler, uint8_t frameIndex, void *picture, PictureImporter &importer)
+const ImportedPicture *TextureRegistry::Submit(int texture, MAF::BufferHandler *handler, uint8_t frameIndex, void *picture, int width, int height,
+                                               PictureImporter &importer)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     auto t = textures_.find(texture);
@@ -68,7 +71,12 @@ const ImportedPicture *TextureRegistry::Submit(int texture, MAF::BufferHandler *
     auto s = shown_.find(key);
     if (s == shown_.end())
     {
-        std::shared_ptr<ImportedPicture> imported = importer.Import(picture);
+        ImportParams params;
+        params.width = width;
+        params.height = height;
+        params.ycbcrModel = settings_[texture].ycbcrModel;
+        params.ycbcrRange = settings_[texture].ycbcrRange;
+        std::shared_ptr<ImportedPicture> imported = importer.Import(picture, params);
         if (!imported)
         {
             return nullptr;
@@ -79,6 +87,25 @@ const ImportedPicture *TextureRegistry::Submit(int texture, MAF::BufferHandler *
     Retire(t->second);
     t->second = key;
     return s->second.imported.get();
+}
+
+bool TextureRegistry::SetSettings(int texture, const Settings &settings)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = settings_.find(texture);
+    if (it == settings_.end())
+    {
+        return false;
+    }
+    it->second = settings;
+    return true;
+}
+
+TextureRegistry::Settings TextureRegistry::GetSettings(int texture)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = settings_.find(texture);
+    return it == settings_.end() ? Settings() : it->second;
 }
 
 const ImportedPicture *TextureRegistry::Current(int texture)

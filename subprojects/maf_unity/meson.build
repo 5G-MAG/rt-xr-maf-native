@@ -46,7 +46,7 @@ maf_unity_core = static_library(
 
 maf_unity = shared_library(
   'maf_unity',
-  files(['src/MafUnity.mm']),
+  files(['src/MafUnity.cpp', 'src/MetalBackend.mm']),
   include_directories : [maf_unity_includes, unity_api_includes],
   objcpp_args : ['-fobjc-arc'],
   link_with : maf_unity_core,

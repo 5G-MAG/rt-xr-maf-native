@@ -39,9 +39,9 @@ A media pipeline implements media fetching and decoding, exposing its functional
 `subprojects/maf_unity` is a Unity native rendering plugin that shows the frames of [native frame buffers](./maf.md#native-frame-buffers) in Unity textures without copying their pictures. Its C API is in [`MafUnity.h`](../subprojects/maf_unity/include/MafUnity.h).
 
 For each texture, from the main thread:
-1. `MafUnity_CreateTexture()` once.
-2. When a new frame of a native buffer is presented: `MafUnity_SubmitFrame(texture, handler, frame.index, frame.data)`. It imports the picture and returns its number of planes. A frame shown on several textures is imported once.
-3. Wrap the plane textures (`MafUnity_GetPlaneTexture`, with `MafUnity_GetPlaneFormat`, `MafUnity_GetPlaneWidth` and `MafUnity_GetPlaneHeight`) with `Texture2D.CreateExternalTexture` / `UpdateExternalTexture`, and render with them.
+1. `MafUnity_CreateTexture()` once, then `MafUnity_SetColorConversion()` with the `ycbcrModel` and `ycbcrRange` of the texture's `MPEG_sampler_YCbCr` (Vulkan enum values, -1 for the values the picture suggests). With Vulkan, `MafUnity_SetTargetTexture()` with the `RenderTexture` the frames are rendered into.
+2. When a new frame of a native buffer is presented: `MafUnity_SubmitFrame(texture, handler, frame.index, frame.data, frame.width, frame.height)`. It imports the picture (once for a frame shown on several textures).
+3. Metal: wrap the plane textures (`MafUnity_GetPlaneTexture`, with `MafUnity_GetPlaneFormat`, `MafUnity_GetPlaneWidth` and `MafUnity_GetPlaneHeight`) with `Texture2D.CreateExternalTexture` / `UpdateExternalTexture`, and render with them. Vulkan: `CommandBuffer.IssuePluginEventAndData(MafUnity_GetRenderEventFunc(), MAFUNITY_EVENT_UPDATE, texture)` before the commands that use the target texture: the frame is rendered into it, converted to RGB.
 4. Each frame, after the commands that use the textures: `CommandBuffer.IssuePluginEventAndData(MafUnity_GetRenderEventFunc(), MAFUNITY_EVENT_RELEASE, IntPtr.Zero)`. The frames that no texture shows any more are released to their buffer (`BufferHandler::releaseFrame`) once the GPU has completed the commands recorded before the event.
 5. `MafUnity_DestroyTexture()` when the texture is no longer used.
 

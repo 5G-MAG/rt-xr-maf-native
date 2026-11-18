@@ -103,7 +103,7 @@ namespace
             return cache_ != nullptr;
         }
 
-        std::shared_ptr<ImportedPicture> Import(void *picture) override
+        std::shared_ptr<ImportedPicture> Import(void *picture, const ImportParams &params) override
         {
             CVPixelBufferRef buffer = (CVPixelBufferRef)picture;
             if (!buffer || CFGetTypeID(buffer) != CVPixelBufferGetTypeID())
@@ -121,6 +121,7 @@ namespace
 
             CVMetalTextureRef textures[3] = {nullptr, nullptr, nullptr};
             auto imported = std::make_shared<ImportedPicture>();
+            imported->params = params;
             imported->planeCount = layout.count;
             bool ok = true;
             for (int p = 0; p < layout.count && ok; p++)

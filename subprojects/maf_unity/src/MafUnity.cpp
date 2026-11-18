@@ -16,10 +16,8 @@
 
 #include "IUnityInterface.h"
 #include "IUnityGraphics.h"
-#import <Metal/Metal.h>
-#include "IUnityGraphicsMetal.h"
 
-#include "Importers.hpp"
+#include "Backend.hpp"
 #include "TextureRegistry.hpp"
 
 namespace
@@ -27,8 +25,7 @@ namespace
 
     IUnityInterfaces *s_interfaces = nullptr;
     IUnityGraphics *s_graphics = nullptr;
-    IUnityGraphicsMetalV1 *s_metal = nullptr;
-    std::unique_ptr<PictureImporter> s_importer;
+    std::unique_ptr<GraphicsBackend> s_backend;
 
     TextureRegistry &Registry()
     {
@@ -36,56 +33,43 @@ namespace
         return registry;
     }
 
-    // An importer for the graphics API of Unity, or nullptr
-    std::unique_ptr<PictureImporter> CreateImporter()
+    // The backend of the graphics API of Unity, or nullptr
+    std::unique_ptr<GraphicsBackend> CreateBackend()
     {
-        if (s_graphics && s_graphics->GetRenderer() == kUnityGfxRendererMetal)
-        {
-            s_metal = s_interfaces->Get<IUnityGraphicsMetalV1>();
-            if (s_metal)
-            {
-                return CreateMetalImporter(s_metal->MetalDevice());
-            }
-        }
+#if defined(__APPLE__)
+        return CreateMetalBackend(s_interfaces);
+#elif defined(__ANDROID__)
+        return CreateVulkanBackend(s_interfaces);
+#else
         return nullptr;
+#endif
     }
 
     void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType type)
     {
         if (type == kUnityGfxDeviceEventInitialize)
         {
-            s_importer = CreateImporter();
+            s_backend = CreateBackend();
         }
         else if (type == kUnityGfxDeviceEventShutdown)
         {
-            s_importer.reset();
-            s_metal = nullptr;
+            s_backend.reset();
         }
     }
 
     void UNITY_INTERFACE_API OnRenderEvent(int eventId, void *data)
     {
-        (void)data;
-        if (eventId != MAFUNITY_EVENT_RELEASE)
+        if (!s_backend)
         {
             return;
         }
-        const uint64_t batch = Registry().RetireBatch();
-        if (batch == 0)
+        if (eventId == MAFUNITY_EVENT_RELEASE)
         {
-            return;
+            s_backend->Release(Registry());
         }
-        // the frames retired before the event are no longer used once the commands recorded until now complete
-        id<MTLCommandBuffer> commands = s_metal ? s_metal->CurrentCommandBuffer() : nil;
-        if (commands)
+        else if (eventId == MAFUNITY_EVENT_UPDATE)
         {
-            [commands addCompletedHandler:^(id<MTLCommandBuffer>) {
-              Registry().Complete(batch);
-            }];
-        }
-        else
-        {
-            Registry().Complete(batch);
+            s_backend->Update(Registry(), (int)(intptr_t)data);
         }
     }
 
@@ -101,6 +85,9 @@ extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnit
 {
     s_interfaces = interfaces;
     s_graphics = interfaces->Get<IUnityGraphics>();
+#ifdef __ANDROID__
+    InterceptVulkanInitialization(interfaces);
+#endif
     s_graphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
     // the graphics device may already be initialized
     OnGraphicsDeviceEvent(kUnityGfxDeviceEventInitialize);
@@ -112,14 +99,14 @@ extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginUnload()
     {
         s_graphics->UnregisterDeviceEventCallback(OnGraphicsDeviceEvent);
     }
-    s_importer.reset();
+    s_backend.reset();
 }
 
 extern "C" {
 
 int UNITY_INTERFACE_API MafUnity_IsSupported(void)
 {
-    return s_importer ? 1 : 0;
+    return s_backend ? 1 : 0;
 }
 
 int UNITY_INTERFACE_API MafUnity_CreateTexture(void)
@@ -132,14 +119,35 @@ void UNITY_INTERFACE_API MafUnity_DestroyTexture(int texture)
     Registry().Destroy(texture);
 }
 
-int UNITY_INTERFACE_API MafUnity_SubmitFrame(int texture, void *handler, int frameIndex, void *picture)
+int UNITY_INTERFACE_API MafUnity_SetColorConversion(int texture, int ycbcrModel, int ycbcrRange)
 {
-    if (!s_importer || frameIndex < 0 || frameIndex > 255)
+    TextureRegistry::Settings s = Registry().GetSettings(texture);
+    s.ycbcrModel = ycbcrModel;
+    s.ycbcrRange = ycbcrRange;
+    return Registry().SetSettings(texture, s) ? 1 : 0;
+}
+
+int UNITY_INTERFACE_API MafUnity_SetTargetTexture(int texture, void *nativeTexture, int flipY)
+{
+    TextureRegistry::Settings s = Registry().GetSettings(texture);
+    s.target = nativeTexture;
+    s.flipY = flipY != 0;
+    return Registry().SetSettings(texture, s) ? 1 : 0;
+}
+
+int UNITY_INTERFACE_API MafUnity_SubmitFrame(int texture, void *handler, int frameIndex, void *picture, int width, int height)
+{
+    if (!s_backend || frameIndex < 0 || frameIndex > 255)
     {
         return 0;
     }
-    const ImportedPicture *p = Registry().Submit(texture, (MAF::BufferHandler *)handler, (uint8_t)frameIndex, picture, *s_importer);
-    return p ? p->planeCount : 0;
+    const ImportedPicture *p = Registry().Submit(texture, (MAF::BufferHandler *)handler, (uint8_t)frameIndex, picture, width, height, s_backend->Importer());
+    if (!p)
+    {
+        return 0;
+    }
+    // a picture the backend renders into the target has no plane textures
+    return p->planeCount > 0 ? p->planeCount : 1;
 }
 
 void *UNITY_INTERFACE_API MafUnity_GetPlaneTexture(int texture, int plane)
