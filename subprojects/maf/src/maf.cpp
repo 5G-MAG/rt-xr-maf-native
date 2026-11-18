@@ -104,6 +104,8 @@ Frame::Frame(uint8_t i, uint64_t t, uint32_t byteLength, uint8_t* buffer){
 }
 
 void BufferHandler::allocate(uint8_t capacity){
+    native_ = false;
+    holdOnRead_ = false;
     frames_.resize(capacity);
     for (uint8_t i = 0; i < frames_.size(); i++){
         Frame& f = frames_[i];
@@ -121,6 +123,8 @@ void BufferHandler::allocate(uint8_t capacity){
 }
 
 void BufferHandler::allocate(uint8_t capacity, uint32_t maxFrameSize){
+    native_ = false;
+    holdOnRead_ = false;
     frames_.resize(capacity);
     for (uint8_t i = 0; i < frames_.size(); i++){
         Frame& f = frames_[i];
@@ -137,6 +141,17 @@ void BufferHandler::allocate(uint8_t capacity, uint32_t maxFrameSize){
     held_.assign(capacity, false);
 }
 
+void BufferHandler::allocateNative(uint8_t capacity){
+#ifdef MAF_NATIVE_FRAMES
+    allocate(capacity);
+    native_ = true;
+    holdOnRead_ = true;
+#else
+    (void)capacity;
+    throw "native frame buffers are not supported by this build";
+#endif
+}
+
 uint8_t BufferHandler::count(){
     return count_;
 }
@@ -146,8 +161,9 @@ uint8_t BufferHandler::capacity(){
 }
 
 void BufferHandler::free(){
+    // the frames of a native buffer hold handles owned by the writer
     for (auto &frame: frames_ ){
-        if(frame.data != nullptr){
+        if(frame.data != nullptr && !native_){
             std::free(frame.data);
         }
     }

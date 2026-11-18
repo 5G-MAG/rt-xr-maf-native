@@ -20,6 +20,8 @@
 #include<mutex>
 #include<condition_variable>
 
+#include "maf_config.hpp"
+
 #if defined(_MSC_VER)
     #define EXPORT __declspec(dllexport)
     #define IMPORT __declspec(dllimport)
@@ -122,6 +124,7 @@ private:
     // called with its index. Frames are held when read only if holdOnRead_ is set.
     std::vector<bool> held_;
     bool holdOnRead_ {false};
+    bool native_ {false};
     void hold(int idx); // requires mutex_
 public:
     BufferHandler()=default;
@@ -129,6 +132,12 @@ public:
     std::vector<Frame>* getFrames();
     void allocate(uint8_t capacity);
     void allocate(uint8_t capacity, uint32_t maxFrameSize);
+    // IMPLEMENTATION CONVENTION, NOT PART OF ISO/IEC 23090-14: allocates a native frame buffer, for a texture whose
+    // BufferInfo.outputMedia.memory is FRAME_MEMORY_NATIVE. Frame.data of each frame written to it is a handle to the
+    // picture, owned by the writer: a CVPixelBufferRef on Apple platforms, an AHardwareBuffer* on Android; Frame.length
+    // is 0. Each frame read is held until releaseFrame() is called with its index. free() does not release the handles.
+    // Throws when the library is built without native frame buffers (MAF_NATIVE_FRAMES is not defined).
+    void allocateNative(uint8_t capacity);
     uint8_t capacity();
     uint8_t count();
     void free();
@@ -214,6 +223,14 @@ enum ColorFormat {
     G8_B8R8_2PLANE_420_UNORM
 };
 
+// IMPLEMENTATION CONVENTION, NOT PART OF ISO/IEC 23090-14: where the frames of a buffer store the picture
+enum FrameMemory {
+    // in Frame.data, as bytes (clause 6.3)
+    FRAME_MEMORY_CPU = 0,
+    // Frame.data is a handle to the picture in memory the GPU can import, see BufferHandler::allocateNative()
+    FRAME_MEMORY_NATIVE = 1
+};
+
 // ISO/IEC 23090-14, clause 6.2: the format of the media the pipeline outputs. width and height are those of a texture
 // (the maximum picture size of MPEG_texture_video), format its pixel format, sampleRate the sample rate of audio.
 // A width, height or sampleRate of 0 is not set: the decoded value is kept.
@@ -223,6 +240,9 @@ struct OutputMedia
     uint32_t height = 0;
     ColorFormat format = ColorFormat::RGB;
     uint32_t sampleRate = 0;
+    // IMPLEMENTATION CONVENTION, NOT PART OF ISO/IEC 23090-14: the memory the frames of a texture are stored in.
+    // FRAME_MEMORY_NATIVE requires a buffer allocated with BufferHandler::allocateNative().
+    FrameMemory memory = FRAME_MEMORY_CPU;
 };
 
 struct BufferInfo

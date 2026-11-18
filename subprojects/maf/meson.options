@@ -1,0 +1,1 @@
+option('native_frames', type : 'combo', choices : ['auto', 'none'], value : 'auto', description : 'native frame buffers: auto enables them on the platforms that have them (Apple, Android), none disables them')

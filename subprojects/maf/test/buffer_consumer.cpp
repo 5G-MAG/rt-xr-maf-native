@@ -146,6 +146,135 @@ TEST_CASE("buffer: nothing is writable before allocation and after free")
     CHECK_THROWS(h.writeFrame2(nullptr));
 }
 
+#ifdef MAF_NATIVE_FRAMES
+
+namespace {
+
+// Stand-ins for the picture handles of a native buffer: the buffer only stores and returns the pointer. free() must
+// not release them: these handles are not heap allocated, so a call to std::free on them would crash the test.
+int fakePictures[8];
+
+void *handle(int i)
+{
+    return &fakePictures[i];
+}
+
+// Writes a native frame in place at the write index, as a media pipeline does: Frame.data is the handle, length is 0.
+bool produceNative(BufferHandler &h, double time_s, int picture)
+{
+    int idx = h.getWriteIdx();
+    if (!h.isWritable(idx)) {
+        return false;
+    }
+    Frame *f = &h.getFrames()->at(idx);
+    f->data = (uint8_t *)handle(picture);
+    f->length = 0;
+    f->timestamp = getTimestamp(time_s);
+    f->extraFrameInfoFlags = 0x01;
+    f->width = 64;
+    f->height = 32;
+    h.writeFrame2(f);
+    return true;
+}
+
+} // namespace
+
+TEST_CASE("native buffer: frames carry the handle written by the producer")
+{
+    BufferHandler h;
+    h.allocateNative(4);
+    CHECK(h.getFrames()->at(0).data == nullptr);
+    CHECK(produceNative(h, 1.0, 1));
+    CHECK(produceNative(h, 2.0, 2));
+
+    Frame *f = h.readFrame();
+    CHECK(f != nullptr && f->data == handle(1) && f->length == 0 && f->width == 64 && f->height == 32);
+    f = h.readFrame();
+    CHECK(f != nullptr && f->data == handle(2));
+    h.free();
+}
+
+TEST_CASE("native buffer: a frame read is not overwritten until it is released")
+{
+    BufferHandler h;
+    h.allocateNative(3);
+    CHECK(produceNative(h, 1.0, 1));
+    CHECK(produceNative(h, 2.0, 2));
+    CHECK(produceNative(h, 3.0, 3));
+
+    // the consumer presents frame 0, then frame 1: on a CPU buffer frame 0 could be written again
+    CHECK(h.readFrame() != nullptr);
+    CHECK(h.readFrame() != nullptr);
+    CHECK(h.getWriteIdx() == 0);
+    CHECK(!h.isWritable(0));
+    CHECK(!produceNative(h, 4.0, 4));
+    CHECK_THROWS(h.writeFrame2(&h.getFrames()->at(0)));
+
+    // the consumer is done with frame 0 (e.g. the GPU finished reading it)
+    h.releaseFrame(0);
+    CHECK(h.isWritable(0));
+    CHECK(produceNative(h, 4.0, 4));
+    // frame 1 is held, and it is the presentation frame: it is protected either way
+    CHECK(h.getWriteIdx() == 1);
+    CHECK(!h.isWritable(1));
+    h.releaseFrame(1);
+    CHECK(!h.isWritable(1));
+    // once frame 2 is presented and frame 1 is released, frame 1 can be written
+    CHECK(h.readFrame() != nullptr);
+    CHECK(h.isWritable(1));
+    CHECK(produceNative(h, 5.0, 5));
+    h.free();
+}
+
+TEST_CASE("native buffer: readFrame(time) holds the frame it returns, reading it again holds it once")
+{
+    BufferHandler h;
+    h.allocateNative(3);
+    CHECK(produceNative(h, 1.0, 1));
+    CHECK(produceNative(h, 2.0, 2));
+
+    Frame *f = h.readFrame(1.5);
+    CHECK(f != nullptr && f->data == handle(1));
+    f = h.readFrame(1.6); // the same frame, presented again
+    CHECK(f != nullptr && f->index == 0);
+    // readFrame(time) does not consume frames: readFrame() moves the presentation to the next frame
+    f = h.readFrame();
+    CHECK(f != nullptr && f->index == 1);
+    CHECK(produceNative(h, 3.0, 3));
+    CHECK(h.getWriteIdx() == 0);
+    CHECK(!h.isWritable(0)); // no longer presented, but still held
+    h.releaseFrame(0); // one release is enough
+    CHECK(h.isWritable(0));
+    h.free();
+}
+
+TEST_CASE("native buffer: free() leaves the handles to their owner, allocate() makes a CPU buffer again")
+{
+    BufferHandler h;
+    h.allocateNative(2);
+    CHECK(produceNative(h, 1.0, 1));
+    CHECK(h.readFrame() != nullptr);
+    h.free(); // would crash if it freed the fake handles
+
+    h.allocate(2, kFrameSize);
+    CHECK(produce(h, 1.0, 1));
+    CHECK(h.readFrame() != nullptr);
+    CHECK(produce(h, 2.0, 2));
+    CHECK(h.readFrame() != nullptr);
+    CHECK(h.isWritable(0)); // not held
+    h.free();
+}
+
+#else
+
+TEST_CASE("native buffer: not supported by this build")
+{
+    BufferHandler h;
+    CHECK_THROWS(h.allocateNative(2));
+}
+
+#endif
+
 int main()
 {
     return check::run();
