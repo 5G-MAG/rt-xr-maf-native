@@ -118,6 +118,11 @@ private:
     // void (*onFrameWrite_)();
     // void (*onFrameRead_)();
     int presentationFrameIdx_ {-1};
+    // ISO/IEC 23090-14, clause 6.3: a held frame is not overwritten by the write process until releaseFrame() is
+    // called with its index. Frames are held when read only if holdOnRead_ is set.
+    std::vector<bool> held_;
+    bool holdOnRead_ {false};
+    void hold(int idx); // requires mutex_
 public:
     BufferHandler()=default;
     ~BufferHandler()=default;
@@ -137,6 +142,10 @@ public:
     Frame* readFrame(uint64_t *timestamp); // timestamp formated as ntp without epoch
     Frame* readFrame(double time_s); // see: Table 25 - IDL of buffer API 
     // Frame* readFrame(uint64_t time_us); 
+    // ISO/IEC 23090-14, clause 6.3 (Table 23): the data of the frame at index may be overwritten by the write process
+    void releaseFrame(uint8_t index);
+    // whether the write process may write the frame at idx: the buffer is not full there and the frame is not held
+    bool isWritable(int idx);
     void setOnFrameWriteCallback(Callback onFrameWrite);
     void setOnFrameReadCallback(Callback onFrameRead);
     // void setOnFrameWriteCallback(void (*onFrameWrite)());

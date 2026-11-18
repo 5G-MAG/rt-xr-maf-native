@@ -116,6 +116,8 @@ void BufferHandler::allocate(uint8_t capacity){
     capacity_ = capacity;
     writeIdx_ = 0;
     readIdx_ = 0;
+    presentationFrameIdx_ = -1;
+    held_.assign(capacity, false);
 }
 
 void BufferHandler::allocate(uint8_t capacity, uint32_t maxFrameSize){
@@ -131,6 +133,8 @@ void BufferHandler::allocate(uint8_t capacity, uint32_t maxFrameSize){
     capacity_ = capacity;
     writeIdx_ = 0;
     readIdx_ = 0;
+    presentationFrameIdx_ = -1;
+    held_.assign(capacity, false);
 }
 
 uint8_t BufferHandler::count(){
@@ -149,6 +153,7 @@ void BufferHandler::free(){
     }
     std::lock_guard<std::mutex> lock(mutex_);
     frames_.clear();
+    held_.clear();
     capacity_ = 0;
     count_ = 0;
 }
@@ -160,6 +165,8 @@ void BufferHandler::writeFrame(Frame *frame){
 
     if(capacity_ == 0)
         throw "buffer handler not allocated";
+    if (held_[writeIdx_])
+        throw "buffer frame is held";
 
     if(frame != &frames_[writeIdx_]){
         frames_[writeIdx_].index = writeIdx_;
@@ -206,6 +213,8 @@ void BufferHandler::writeFrame2(Frame *frame){
         throw "buffer handler not allocated";
     if ((readIdx_ == writeIdx_) && (count_ > 0))
         throw "buffer handler is full";
+    if (held_[writeIdx_])
+        throw "buffer frame is held";
     if(frame != &frames_[writeIdx_]){
         frames_[writeIdx_].index = writeIdx_;
         frames_[writeIdx_].timestamp = frame->timestamp;
@@ -243,6 +252,7 @@ Frame* BufferHandler::readFrame(){
         presentationFrameIdx_ = readIdx_;
     }
     Frame* frame = &frames_[readIdx_];
+    hold(readIdx_);
     count_--;
     if (onFrameRead_ != nullptr){
         (*onFrameRead_)();
@@ -266,6 +276,7 @@ Frame* BufferHandler::readFrame(uint64_t* timestamp){
         Frame* frame = &frames_[idx];
         if (frame->timestamp == *timestamp){
             presentationFrameIdx_ = idx;
+            hold(idx);
             return frame;
         }
         idx = (idx+1) % capacity_;
@@ -292,8 +303,31 @@ Frame* BufferHandler::readFrame(double time_s){
     }
     if (frame != nullptr){
         presentationFrameIdx_ = ((idx + capacity_ )- 1) % capacity_;
+        hold(presentationFrameIdx_);
     }
     return frame;
+}
+
+void BufferHandler::hold(int idx){
+    if (holdOnRead_ && idx >= 0 && (size_t)idx < held_.size()){
+        held_[idx] = true;
+    }
+}
+
+void BufferHandler::releaseFrame(uint8_t index){
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (index < held_.size()){
+        held_[index] = false;
+    }
+}
+
+bool BufferHandler::isWritable(int idx){
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (capacity_ < 2 || idx < 0 || idx >= capacity_)
+        return false;
+    if ((idx == readIdx_) && (count_ > 0))
+        return false;
+    return !held_[idx];
 }
 
 // void BufferHandler::setOnFrameWriteCallback(void (*onFrameWrite)()){

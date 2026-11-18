@@ -22,4 +22,4 @@ libmaf = both_libraries(
 
 libmaf_dep = declare_dependency(include_directories: libmaf_includes, link_with: libmaf)
 
-# subdir('test')
+subdir('test')

@@ -68,14 +68,14 @@ When configuring the project use the [--wrap-mode](https://mesonbuild.com/Subpro
 The project has a dependency on FFmpeg 5.1 libraries.
 See [subprojects/packagefiles/FFmpeg-5.1/README.md](subprojects/packagefiles/FFmpeg-5.1/README.md) for guidance on setting it up.
 
-### Catch2
+### Tests
 
-The Catch2 is used for unit tests and is downloaded automatically upon setup, as specified in [`subprojects/catch2.wrap`](subprojects/catch2.wrap).
+The tests have no dependency. They are built with the libraries and run with:
+```
+meson test -C builddir
+```
 
-to disable automatic download 
-```
-meson setup --wrap-mode=nodownload builddir
-```
+`subprojects/maf/test` holds the consumer tests of the Buffer API: each test plays the role of the Presentation Engine, allocates a buffer, writes frames the way the media pipelines do and reads them back.
 
 
 
